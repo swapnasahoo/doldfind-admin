@@ -12,9 +12,9 @@ const configSchema = z.object({
   }),
   founders: z.array(
     z.object({
-      username: z.string().min(1),
-      passwordHash: z.string().min(1),
-      badge: z.string().min(1),
+      username: z.string().min(1, "Username is required"),
+      passwordHash: z.string().min(1, "Password hash is required"),
+      badge: z.string().min(1, "Badge is required"),
     })
   ),
 });
@@ -23,19 +23,12 @@ export type Config = z.infer<typeof configSchema>;
 
 let cachedConfig: Config | null = null;
 
-/**
- * Loads configuration from environment variables and validates them.
- * Returns mock values during build phase if environment variables are missing.
- */
 export function loadConfig(): Config {
-  if (cachedConfig) return cachedConfig;
+  if (cachedConfig) {
+    return cachedConfig;
+  }
 
-  // Detect Next.js build phase
-  const isBuildPhase = 
-    process.env.NEXT_PHASE === "phase-production-build" ||
-    (!process.env.JWT_SESSION_SECRET && process.env.NODE_ENV === "production");
-
-  const parseResult = configSchema.safeParse({
+  const rawConfig = {
     google: {
       projectId: process.env.GOOGLE_PROJECT_ID,
       clientEmail: process.env.GOOGLE_CLIENT_EMAIL,
@@ -62,43 +55,46 @@ export function loadConfig(): Config {
         badge: process.env.ADMIN_ISHAN_BADGE,
       },
     ],
-  });
+  };
 
-  if (!parseResult.success) {
-    if (isBuildPhase) {
-      // Return temporary mock configs during Next.js build-time static checks
-      return {
-        google: {
-          projectId: "mock-project",
-          clientEmail: "mock@example.com",
-          privateKey: "mock-private-key",
-          sheetId: "mock-sheet-id",
-        },
-        session: {
-          secret: "mock-session-secret-long-enough-32-chars-minimum",
-        },
-        founders: [
-          { username: "mock-user-1", passwordHash: "mock-hash", badge: "Founder" },
-          { username: "mock-user-2", passwordHash: "mock-hash", badge: "Founder" },
-          { username: "mock-user-3", passwordHash: "mock-hash", badge: "Founder" },
-        ],
-      };
-    }
+  const result = configSchema.safeParse(rawConfig);
 
-    console.error(
-  "ENV VALIDATION ERROR:",
-  JSON.stringify(parseResult.error.format(), null, 2)
-);
+  if (!result.success) {
+    console.error("========== ENV VALIDATION FAILED ==========");
+    console.error(JSON.stringify(result.error.format(), null, 2));
 
-return new Response(
-  JSON.stringify(parseResult.error.format(), null, 2),
-  { status: 500 }
-);
+    console.error("========== RAW ENV CHECK ==========");
+    console.table({
+      GOOGLE_PROJECT_ID: !!process.env.GOOGLE_PROJECT_ID,
+      GOOGLE_CLIENT_EMAIL: process.env.GOOGLE_CLIENT_EMAIL,
+      GOOGLE_PRIVATE_KEY: !!process.env.GOOGLE_PRIVATE_KEY,
+      GOOGLE_SHEET_ID: !!process.env.GOOGLE_SHEET_ID,
+      JWT_SESSION_SECRET_LENGTH:
+        process.env.JWT_SESSION_SECRET?.length ?? 0,
+
+      ADMIN_SWAPNA_USERNAME: process.env.ADMIN_SWAPNA_USERNAME,
+      ADMIN_SWAPNA_PASSWORD_HASH:
+        !!process.env.ADMIN_SWAPNA_PASSWORD_HASH,
+      ADMIN_SWAPNA_BADGE: process.env.ADMIN_SWAPNA_BADGE,
+
+      ADMIN_RIHAN_USERNAME: process.env.ADMIN_RIHAN_USERNAME,
+      ADMIN_RIHAN_PASSWORD_HASH:
+        !!process.env.ADMIN_RIHAN_PASSWORD_HASH,
+      ADMIN_RIHAN_BADGE: process.env.ADMIN_RIHAN_BADGE,
+
+      ADMIN_ISHAN_USERNAME: process.env.ADMIN_ISHAN_USERNAME,
+      ADMIN_ISHAN_PASSWORD_HASH:
+        !!process.env.ADMIN_ISHAN_PASSWORD_HASH,
+      ADMIN_ISHAN_BADGE: process.env.ADMIN_ISHAN_BADGE,
+    });
+
+    throw new Error("Configuration validation failed.");
   }
 
-  cachedConfig = parseResult.data;
+  cachedConfig = result.data;
   return cachedConfig;
 }
 
 export const config = loadConfig();
+
 export default config;
