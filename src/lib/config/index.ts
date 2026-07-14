@@ -8,7 +8,7 @@ const configSchema = z.object({
     sheetId: z.string().min(1, "GOOGLE_SHEET_ID is required"),
   }),
   session: z.object({
-    secret: z.string().min(32, "SESSION_SECRET must be at least 32 characters long"),
+    secret: z.string().min(32, "JWT_SESSION_SECRET must be at least 32 characters long"),
   }),
   founders: z.array(
     z.object({
@@ -33,7 +33,7 @@ export function loadConfig(): Config {
   // Detect Next.js build phase
   const isBuildPhase = 
     process.env.NEXT_PHASE === "phase-production-build" ||
-    (!process.env.SESSION_SECRET && process.env.NODE_ENV === "production");
+    (!process.env.JWT_SESSION_SECRET && process.env.NODE_ENV === "production");
 
   const parseResult = configSchema.safeParse({
     google: {
@@ -43,7 +43,7 @@ export function loadConfig(): Config {
       sheetId: process.env.GOOGLE_SHEET_ID,
     },
     session: {
-      secret: process.env.SESSION_SECRET,
+      secret: process.env.JWT_SESSION_SECRET,
     },
     founders: [
       {

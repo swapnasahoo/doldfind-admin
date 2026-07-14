@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 
 // Retrieve the session secret for verification in edge middleware.
-const secretText = process.env.SESSION_SECRET || "";
+const secretText = process.env.JWT_SESSION_SECRET || "";
 const encodedSecret = new TextEncoder().encode(secretText);
 
 export async function middleware(request: NextRequest) {
