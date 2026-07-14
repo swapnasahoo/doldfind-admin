@@ -85,8 +85,15 @@ export function loadConfig(): Config {
       };
     }
 
-    console.error("❌ Invalid environment variables configuration:", parseResult.error.format());
-    throw new Error("Configuration validation failed. Check your environment variables.");
+    console.error(
+  "ENV VALIDATION ERROR:",
+  JSON.stringify(parseResult.error.format(), null, 2)
+);
+
+return new Response(
+  JSON.stringify(parseResult.error.format(), null, 2),
+  { status: 500 }
+);
   }
 
   cachedConfig = parseResult.data;
