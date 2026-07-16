@@ -62,10 +62,57 @@ export class GoogleSheetsPlaceRepository implements PlaceRepository {
   }
 
   /**
+   * Checks if the header row exists in Sheet1!A1:O1, and writes it if missing.
+   */
+  private async ensureHeadersExist(): Promise<void> {
+    try {
+      const res = await this.sheets.spreadsheets.values.get({
+        spreadsheetId: config.google.sheetId,
+        range: "Sheet1!A1:O1",
+      });
+
+      const rows = res.data.values;
+      if (!rows || rows.length === 0 || !rows[0] || rows[0].length === 0 || !rows[0][0]) {
+        Logger.info("Initializing Google Sheet header row.");
+        const headers = [
+          "Submission ID",
+          "Submitted At",
+          "Submitted By",
+          "Badge",
+          "Place ID",
+          "Title",
+          "Categories",
+          "Description",
+          "Location",
+          "Latitude",
+          "Longitude",
+          "Info Cards",
+          "Uploader Username",
+          "Uploader Badge",
+          "Safety Note",
+        ];
+        await this.sheets.spreadsheets.values.update({
+          spreadsheetId: config.google.sheetId,
+          range: "Sheet1!A1:O1",
+          valueInputOption: "RAW",
+          requestBody: {
+            values: [headers],
+          },
+        });
+      }
+    } catch (error) {
+      Logger.warn("Failed to check or initialize header row in Google Sheet:", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  /**
    * Appends place details and submission audit logs to the designated Google Sheet.
    */
   public async save(place: PlaceDetails, audit: PlaceSubmissionAudit): Promise<string> {
     try {
+      await this.ensureHeadersExist();
       const infoCardsFormatted = this.formatInfoCards(place.infoCards);
 
       const rowValues = [
