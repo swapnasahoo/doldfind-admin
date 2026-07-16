@@ -12,6 +12,12 @@ export async function POST(request: NextRequest) {
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0] || "127.0.0.1";
   const userAgent = request.headers.get("user-agent") || "unknown";
 
+  // Content-Type validation
+  const contentType = request.headers.get("content-type");
+  if (!contentType || !contentType.includes("application/json")) {
+    return jsonError("BAD_REQUEST", "Unsupported Content-Type. Please use application/json.", 400);
+  }
+
   // 1. Session verification (Authentication)
   const session = await getSession();
   if (!session) {
@@ -49,9 +55,14 @@ export async function POST(request: NextRequest) {
       return jsonError("BAD_REQUEST", "Payload size limit exceeded.", 400);
     }
 
-    const body = JSON.parse(bodyText);
+    let body: any;
+    try {
+      body = JSON.parse(bodyText);
+    } catch (parseErr) {
+      return jsonError("BAD_REQUEST", "Invalid JSON format.", 400);
+    }
 
-    // 4. WAF Input Sanitization (reject HTML, JS, XSS, malformed unicode)
+    // 4. WAF Input Sanitization (reject HTML, JS, XSS, malformed unicode, CSV injection)
     if (!validateSafePayload(body)) {
       AuditLogger.log({
         event: "VALIDATION_FAILED",
@@ -60,7 +71,7 @@ export async function POST(request: NextRequest) {
         userAgent,
         details: { reason: "Security WAF validation failed. Malicious strings detected." },
       });
-      return jsonError("SECURITY_VIOLATION", "Payload contains forbidden HTML/JS/XSS characters.", 400);
+      return jsonError("SECURITY_VIOLATION", "Payload contains forbidden or malicious content.", 400);
     }
 
     // 5. Zod schema validation
@@ -71,9 +82,11 @@ export async function POST(request: NextRequest) {
         username,
         ip,
         userAgent,
-        details: { errors: parseResult.error.format() },
+        details: { errors: "Schema validation failed." }, // Do not log complex zod schema errors details in audit logs
       });
-      return jsonError("VALIDATION_ERROR", "Validation failed. Check your inputs.", 400, parseResult.error.format());
+      // Sanitize the response: only return field path and error message, avoiding implementation stack traces or variables
+      const formattedErrors = parseResult.error.flatten().fieldErrors;
+      return jsonError("VALIDATION_ERROR", "Validation failed. Check your inputs.", 400, formattedErrors);
     }
 
     // 6. Execute submission via Service and Repository layers
@@ -101,8 +114,16 @@ export async function POST(request: NextRequest) {
       username,
       ip,
       userAgent,
-      details: { errorRaw: String(error) },
+      details: { errorRaw: "An internal error occurred while processing place submission." },
     });
     return jsonError("INTERNAL_ERROR", "An internal error occurred while processing submission.", 500);
   }
 }
+
+// Fallback handlers to reject unsupported methods
+export async function GET() { return jsonError("METHOD_NOT_ALLOWED", "Method not allowed.", 405); }
+export async function PUT() { return jsonError("METHOD_NOT_ALLOWED", "Method not allowed.", 405); }
+export async function DELETE() { return jsonError("METHOD_NOT_ALLOWED", "Method not allowed.", 405); }
+export async function PATCH() { return jsonError("METHOD_NOT_ALLOWED", "Method not allowed.", 405); }
+export async function HEAD() { return jsonError("METHOD_NOT_ALLOWED", "Method not allowed.", 405); }
+export async function OPTIONS() { return jsonError("METHOD_NOT_ALLOWED", "Method not allowed.", 405); }

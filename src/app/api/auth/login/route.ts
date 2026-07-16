@@ -19,6 +19,12 @@ export async function POST(request: NextRequest) {
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0] || "127.0.0.1";
   const userAgent = request.headers.get("user-agent") || "unknown";
 
+  // Content-Type validation
+  const contentType = request.headers.get("content-type");
+  if (!contentType || !contentType.includes("application/json")) {
+    return jsonError("BAD_REQUEST", "Unsupported Content-Type. Please use application/json.", 400);
+  }
+
   // 1. Rate Limiting protection
   const isAllowed = checkRateLimit(ip, "login", 5, 60 * 1000); // 5 attempts per min
   if (!isAllowed) {
@@ -40,17 +46,23 @@ export async function POST(request: NextRequest) {
       return jsonError("BAD_REQUEST", "Payload size limit exceeded.", 400);
     }
 
-    const body = JSON.parse(bodyText);
+    let body: any;
+    try {
+      body = JSON.parse(bodyText);
+    } catch (parseErr) {
+      return jsonError("BAD_REQUEST", "Invalid JSON format.", 400);
+    }
+
     const parseResult = loginSchema.safeParse(body);
     if (!parseResult.success) {
       AuditLogger.log({
         event: "VALIDATION_FAILED",
-        username: body.username || "Unknown",
+        username: (body && typeof body === "object" ? body.username : "Unknown") || "Unknown",
         ip,
         userAgent,
-        details: { errors: parseResult.error.format() },
+        details: { errors: "Validation failed (fields sanitized)." },
       });
-      return jsonError("VALIDATION_ERROR", "Invalid inputs format.", 400);
+      return jsonError("VALIDATION_ERROR", "Invalid credentials or input format.", 400);
     }
 
     const { username, password } = parseResult.data;
@@ -76,7 +88,7 @@ export async function POST(request: NextRequest) {
         username,
         ip,
         userAgent,
-        details: { reason: authResult.errorMessage },
+        details: { reason: "Invalid credentials" }, // Don't log exact message/hash parameters
       });
 
       const statusCode = authResult.errorCode === "LOCKOUT" ? 423 : 401;
@@ -88,8 +100,16 @@ export async function POST(request: NextRequest) {
       username: "Anonymous",
       ip,
       userAgent,
-      details: { errorRaw: String(error) },
+      details: { errorRaw: "An internal login error occurred." },
     });
     return jsonError("INTERNAL_ERROR", "A security verification error occurred.", 500);
   }
 }
+
+// Fallback handler to reject unsupported methods
+export async function GET() { return jsonError("METHOD_NOT_ALLOWED", "Method not allowed.", 405); }
+export async function PUT() { return jsonError("METHOD_NOT_ALLOWED", "Method not allowed.", 405); }
+export async function DELETE() { return jsonError("METHOD_NOT_ALLOWED", "Method not allowed.", 405); }
+export async function PATCH() { return jsonError("METHOD_NOT_ALLOWED", "Method not allowed.", 405); }
+export async function HEAD() { return jsonError("METHOD_NOT_ALLOWED", "Method not allowed.", 405); }
+export async function OPTIONS() { return jsonError("METHOD_NOT_ALLOWED", "Method not allowed.", 405); }

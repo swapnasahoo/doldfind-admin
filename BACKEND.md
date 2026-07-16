@@ -54,7 +54,7 @@ All secrets are loaded dynamically from environment configurations via the confi
 
 | Variable Name | Type | Description |
 | :--- | :--- | :--- |
-| `SESSION_SECRET` | `string` | Cryptographic secret key used to sign session cookies. |
+| `JWT_SESSION_SECRET` | `string` | Cryptographic secret key used to sign session cookies. |
 | `GOOGLE_PROJECT_ID` | `string` | Google Cloud project ID. |
 | `GOOGLE_CLIENT_EMAIL` | `string` | Google service account email. |
 | `GOOGLE_PRIVATE_KEY` | `string` | RSA private key for the Google service account. |

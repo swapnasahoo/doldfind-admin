@@ -16,7 +16,7 @@ const configSchema = z.object({
       passwordHash: z.string().min(1, "Password hash is required"),
       badge: z.string().min(1, "Badge is required"),
     })
-  ),
+  ).min(1, "At least one founder must be configured"),
 });
 
 export type Config = z.infer<typeof configSchema>;
@@ -36,7 +36,7 @@ export function loadConfig(): Config {
       sheetId: process.env.GOOGLE_SHEET_ID,
     },
     session: {
-      secret: process.env.JWT_SESSION_SECRET,
+      secret: process.env.JWT_SESSION_SECRET || process.env.SESSION_SECRET,
     },
     founders: [
       {
@@ -54,7 +54,7 @@ export function loadConfig(): Config {
         passwordHash: process.env.ADMIN_ISHAN_PASSWORD_HASH,
         badge: process.env.ADMIN_ISHAN_BADGE,
       },
-    ],
+    ].filter((f) => Boolean(f.username || f.passwordHash || f.badge)),
   };
 
   const result = configSchema.safeParse(rawConfig);
@@ -62,31 +62,6 @@ export function loadConfig(): Config {
   if (!result.success) {
     console.error("========== ENV VALIDATION FAILED ==========");
     console.error(JSON.stringify(result.error.format(), null, 2));
-
-    console.error("========== RAW ENV CHECK ==========");
-    console.table({
-      GOOGLE_PROJECT_ID: !!process.env.GOOGLE_PROJECT_ID,
-      GOOGLE_CLIENT_EMAIL: process.env.GOOGLE_CLIENT_EMAIL,
-      GOOGLE_PRIVATE_KEY: !!process.env.GOOGLE_PRIVATE_KEY,
-      GOOGLE_SHEET_ID: !!process.env.GOOGLE_SHEET_ID,
-      JWT_SESSION_SECRET_LENGTH:
-        process.env.JWT_SESSION_SECRET?.length ?? 0,
-
-      ADMIN_SWAPNA_USERNAME: process.env.ADMIN_SWAPNA_USERNAME,
-      ADMIN_SWAPNA_PASSWORD_HASH:
-        !!process.env.ADMIN_SWAPNA_PASSWORD_HASH,
-      ADMIN_SWAPNA_BADGE: process.env.ADMIN_SWAPNA_BADGE,
-
-      ADMIN_RIHAN_USERNAME: process.env.ADMIN_RIHAN_USERNAME,
-      ADMIN_RIHAN_PASSWORD_HASH:
-        !!process.env.ADMIN_RIHAN_PASSWORD_HASH,
-      ADMIN_RIHAN_BADGE: process.env.ADMIN_RIHAN_BADGE,
-
-      ADMIN_ISHAN_USERNAME: process.env.ADMIN_ISHAN_USERNAME,
-      ADMIN_ISHAN_PASSWORD_HASH:
-        !!process.env.ADMIN_ISHAN_PASSWORD_HASH,
-      ADMIN_ISHAN_BADGE: process.env.ADMIN_ISHAN_BADGE,
-    });
 
     throw new Error("Configuration validation failed.");
   }

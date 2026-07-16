@@ -26,3 +26,11 @@ export async function POST(request: NextRequest) {
     return jsonError("INTERNAL_ERROR", "Failed to clear session.", 500);
   }
 }
+
+// Fallback handlers to reject unsupported methods
+export async function GET() { return jsonError("METHOD_NOT_ALLOWED", "Method not allowed.", 405); }
+export async function PUT() { return jsonError("METHOD_NOT_ALLOWED", "Method not allowed.", 405); }
+export async function DELETE() { return jsonError("METHOD_NOT_ALLOWED", "Method not allowed.", 405); }
+export async function PATCH() { return jsonError("METHOD_NOT_ALLOWED", "Method not allowed.", 405); }
+export async function HEAD() { return jsonError("METHOD_NOT_ALLOWED", "Method not allowed.", 405); }
+export async function OPTIONS() { return jsonError("METHOD_NOT_ALLOWED", "Method not allowed.", 405); }
