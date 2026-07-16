@@ -179,12 +179,116 @@ export function normalizePlaceDetails(formValues: PlaceFormValues): PlaceDetails
     },
 
     similarSpots: [],
+ 
+     uploader: {
+       username: "",
+       badge: "",
+     },
+ 
+     reviews: [],
+   };
+ }
 
-    uploader: {
-      username: "",
-      badge: "",
-    },
+function parseHour(hStr: string): number {
+  hStr = hStr.trim();
+  const match = hStr.match(/^(\d+)\s*(AM|PM)$/i);
+  if (!match) return 0;
+  let h = parseInt(match[1]);
+  const ampm = match[2].toUpperCase();
+  if (ampm === "PM" && h !== 12) h += 12;
+  if (ampm === "AM" && h === 12) h = 0;
+  return h;
+}
 
-    reviews: [],
+export function parseTimeSlots(timingsStr: string): number[] {
+  if (!timingsStr) return [];
+  const slots: number[] = [];
+  const ranges = timingsStr.split(",");
+  for (const range of ranges) {
+    const parts = range.split("-");
+    if (parts.length !== 2) continue;
+    const start = parseHour(parts[0]);
+    let end = parseHour(parts[1]);
+    if (end === 0 && parts[1].toUpperCase().includes("AM")) {
+      end = 24;
+    }
+    if (start < end) {
+      for (let h = start; h < end; h++) {
+        slots.push(h);
+      }
+    } else {
+      for (let h = start; h < 24; h++) {
+        slots.push(h);
+      }
+      for (let h = 0; h < end; h++) {
+        slots.push(h);
+      }
+    }
+  }
+  return Array.from(new Set(slots)).sort((a, b) => a - b);
+}
+
+export function mapPlaceDetailsToFormValues(place: PlaceDetails): PlaceFormValues {
+  const getCardValue = (label: string) =>
+    place.infoCards.find((c) => c.label.toLowerCase() === label.toLowerCase())?.value || "";
+
+  const mainCategory = getCardValue("main category");
+  const bestTimingsStr = getCardValue("best timings");
+  const closedDaysStr = getCardValue("closed on");
+  const nearestMetro = getCardValue("nearest metro");
+  const crowdLevel = getCardValue("crowd level");
+  const safetyNote = place.safetyNote || getCardValue("safety note");
+  const feeVal = getCardValue("fee");
+
+  let fee = "";
+  let ticketRequired: "Yes" | "No" | "" = "";
+  if (feeVal === "FREE - TICKET REQUIRED") {
+    fee = "";
+    ticketRequired = "Yes";
+  } else if (feeVal === "FREE - NO TICKET REQUIRED") {
+    fee = "";
+    ticketRequired = "No";
+  } else {
+    fee = feeVal;
+    ticketRequired = place.categories.includes("Free") ? "No" : "Yes";
+  }
+
+  const bestTimings = parseTimeSlots(bestTimingsStr);
+  const closedDays =
+    closedDaysStr === "Never Closed"
+      ? ["Never Closed"]
+      : closedDaysStr
+          .split(",")
+          .map((d) => d.trim())
+          .filter(Boolean);
+
+  const customCards = place.infoCards
+    .filter(
+      (c) =>
+        !["main category", "best timings", "closed on", "nearest metro", "crowd level", "safety note", "fee"].includes(
+          c.label.toLowerCase()
+        )
+    )
+    .map((c) => ({
+      label: c.label,
+      value: c.value,
+    }));
+
+  return {
+    title: place.title,
+    categories: place.categories,
+    description: place.description,
+    location: place.location,
+    latitude: place.coordinates.lat,
+    longitude: place.coordinates.long,
+    infoCards: customCards,
+    safetyNote,
+    mainCategory,
+    bestTimings,
+    closedDays,
+    nearestMetro,
+    crowdLevel,
+    fee,
+    ticketRequired,
   };
 }

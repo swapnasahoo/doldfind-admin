@@ -7,7 +7,8 @@ import { Eye, FileCode, CheckCircle2, AlertTriangle, RefreshCw } from "lucide-re
 
 import { placeSchema } from "@/schemas/placeSchema";
 import { PlaceFormValues, PlaceDetails } from "@/types/place";
-import { normalizePlaceDetails } from "@/utils/parser";
+import { normalizePlaceDetails, mapPlaceDetailsToFormValues } from "@/utils/parser";
+import { useEffect } from "react";
 
 import { Input } from "./ui/Input";
 import { Textarea } from "./ui/Textarea";
@@ -17,7 +18,17 @@ import { Modal } from "./ui/Modal";
 import { InfoCardsArray } from "./InfoCardsArray";
 import { QuickInfoSection } from "./QuickInfoSection";
 
-export const PlaceForm: React.FC = () => {
+interface PlaceFormProps {
+  initialPlace?: PlaceDetails;
+  onSuccess?: (updatedPlace: PlaceDetails) => void;
+  onCancel?: () => void;
+}
+
+export const PlaceForm: React.FC<PlaceFormProps> = ({
+  initialPlace,
+  onSuccess,
+  onCancel,
+}) => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewData, setPreviewData] = useState<PlaceDetails | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<PlaceDetails | null>(null);
@@ -52,6 +63,31 @@ export const PlaceForm: React.FC = () => {
     },
   });
 
+  // Dynamically load place data into form fields when initialPlace changes (edit mode)
+  useEffect(() => {
+    if (initialPlace) {
+      reset(mapPlaceDetailsToFormValues(initialPlace));
+    } else {
+      reset({
+        title: "",
+        categories: [],
+        description: "",
+        location: "",
+        latitude: "",
+        longitude: "",
+        infoCards: [],
+        safetyNote: "",
+        mainCategory: "",
+        bestTimings: [],
+        closedDays: [],
+        nearestMetro: "",
+        crowdLevel: "",
+        fee: "",
+        ticketRequired: "",
+      });
+    }
+  }, [initialPlace, reset]);
+
   const handleOpenPreview = () => {
     // Get raw form values
     const rawValues = getValues();
@@ -65,8 +101,12 @@ export const PlaceForm: React.FC = () => {
     setApiError(null);
     setSubmitSuccess(null);
     try {
-      const res = await fetch("/api/places/submit", {
-        method: "POST",
+      const isEdit = !!initialPlace;
+      const url = isEdit ? `/api/places/${initialPlace.id}` : "/api/places/submit";
+      const method = isEdit ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
         headers: {
           "Content-Type": "application/json",
         },
@@ -77,10 +117,18 @@ export const PlaceForm: React.FC = () => {
 
       if (res.ok && result.success) {
         const normalized = normalizePlaceDetails(data);
-        if (result.submissionId) {
-          normalized.id = result.submissionId;
+        if (isEdit) {
+          normalized.id = initialPlace.id;
+          normalized.uploader = initialPlace.uploader;
+          if (onSuccess) {
+            onSuccess(normalized);
+          }
+        } else {
+          if (result.submissionId) {
+            normalized.id = result.submissionId;
+          }
+          setSubmitSuccess(normalized);
         }
-        setSubmitSuccess(normalized);
       } else {
         setApiError(result.error?.message || "An unexpected error occurred during submission.");
       }
@@ -272,10 +320,22 @@ export const PlaceForm: React.FC = () => {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+            {onCancel && (
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={onCancel}
+                className="w-full sm:w-auto border-slate-800 text-slate-400 hover:text-slate-200"
+              >
+                Cancel
+              </Button>
+            )}
+
             {/* Preview Button */}
             <Button
               variant="secondary"
               onClick={handleOpenPreview}
+              type="button"
               className="w-full sm:w-auto flex items-center justify-center gap-2"
             >
               <FileCode className="w-4 h-4 text-slate-400" />
@@ -289,7 +349,7 @@ export const PlaceForm: React.FC = () => {
               disabled={isSubmitting}
               className="w-full sm:w-auto"
             >
-              Submit Contribution
+              {initialPlace ? "Save Changes" : "Submit Contribution"}
             </Button>
           </div>
         </div>

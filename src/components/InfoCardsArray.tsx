@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useFieldArray, Control, UseFormRegister, FieldErrors } from "react-hook-form";
-import { Plus, Trash2, HelpCircle } from "lucide-react";
+import { Plus, Trash2, HelpCircle, ChevronUp, ChevronDown } from "lucide-react";
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
 import { PlaceFormValues } from "@/types/place";
@@ -18,7 +18,7 @@ export const InfoCardsArray: React.FC<InfoCardsArrayProps> = ({
   register,
   errors,
 }) => {
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, move } = useFieldArray({
     control,
     name: "infoCards",
   });
@@ -65,6 +65,28 @@ export const InfoCardsArray: React.FC<InfoCardsArrayProps> = ({
                       error={cardError?.value?.message}
                       className="bg-slate-950"
                     />
+                  </div>
+
+                  {/* Reorder Buttons */}
+                  <div className="flex items-center gap-1 mt-1 md:mt-0">
+                    <button
+                      type="button"
+                      disabled={index === 0}
+                      onClick={() => move(index, index - 1)}
+                      className="p-2 text-slate-500 hover:text-slate-300 bg-slate-900 border border-slate-850 disabled:opacity-40 disabled:pointer-events-none rounded-lg transition-all"
+                      title="Move Up"
+                    >
+                      <ChevronUp className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={index === fields.length - 1}
+                      onClick={() => move(index, index + 1)}
+                      className="p-2 text-slate-500 hover:text-slate-300 bg-slate-900 border border-slate-850 disabled:opacity-40 disabled:pointer-events-none rounded-lg transition-all"
+                      title="Move Down"
+                    >
+                      <ChevronDown className="w-4 h-4" />
+                    </button>
                   </div>
 
                   {/* Delete Button */}
