@@ -9,11 +9,16 @@ export interface AuditLogParams {
     | "SUBMISSION_FAILED"
     | "VALIDATION_FAILED"
     | "RATE_LIMIT_EXCEEDED"
-    | "AUTH_FAILED";
+    | "AUTH_FAILED"
+    | "PLACE_VIEWED"
+    | "PLACE_EDITED"
+    | "PLACE_DELETED";
   username: string;
+  badge?: string;
   ip: string;
   userAgent: string;
   submissionId?: string;
+  placeId?: string;
   details?: Record<string, unknown>;
 }
 
@@ -37,7 +42,9 @@ export class AuditLogger {
       username: params.username,
       ip: params.ip,
       userAgent: params.userAgent,
+      ...(params.badge && { badge: params.badge }),
       ...(params.submissionId && { submissionId: params.submissionId }),
+      ...(params.placeId && { placeId: params.placeId }),
       details: sanitizedDetails,
     };
 

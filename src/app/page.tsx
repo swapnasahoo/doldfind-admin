@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { PlaceForm } from "@/components/PlaceForm";
 import { Compass, MapPin, LogOut } from "lucide-react";
 
@@ -200,18 +201,30 @@ export default function Home() {
       {/* Header Navigation */}
       <header className="border-b border-slate-900 bg-slate-950/60 backdrop-blur-xl sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
-              <Compass className="w-5 h-5 text-white animate-spin-slow" />
-            </div>
-            <div className="flex flex-col">
-              <span className="font-extrabold tracking-tight text-sm text-slate-100 uppercase">
-                DoldFind
-              </span>
-              <span className="text-[10px] text-slate-400 font-semibold tracking-widest uppercase">
-                Admin Portal
-              </span>
-            </div>
+          <div className="flex items-center gap-6">
+            <Link href="/" className="flex items-center gap-2.5 group">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/20 group-hover:scale-105 transition-all">
+                <Compass className="w-5 h-5 text-white animate-spin-slow" />
+              </div>
+              <div className="flex flex-col">
+                <span className="font-extrabold tracking-tight text-sm text-slate-100 uppercase">
+                  DoldFind
+                </span>
+                <span className="text-[10px] text-slate-400 font-semibold tracking-widest uppercase">
+                  Admin Portal
+                </span>
+              </div>
+            </Link>
+
+            {/* Main Tabs */}
+            <nav className="hidden md:flex items-center gap-4 text-xs font-bold uppercase tracking-wider">
+              <Link href="/" className="text-violet-400 border-b-2 border-violet-500 px-3 py-1">
+                Contribute Spot
+              </Link>
+              <Link href="/places" className="text-slate-400 hover:text-slate-200 transition px-3 py-1">
+                Manage Database
+              </Link>
+            </nav>
           </div>
 
           {/* Active Founder Profile & Logout */}
