@@ -23,6 +23,18 @@ export type Config = z.infer<typeof configSchema>;
 
 let cachedConfig: Config | null = null;
 
+function cleanPrivateKey(key: string | undefined): string {
+  if (!key) return "";
+  let cleaned = key.trim();
+  if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
+    cleaned = cleaned.substring(1, cleaned.length - 1);
+  }
+  if (cleaned.startsWith("'") && cleaned.endsWith("'")) {
+    cleaned = cleaned.substring(1, cleaned.length - 1);
+  }
+  return cleaned.replace(/\\n/g, "\n").trim();
+}
+
 export function loadConfig(): Config {
   if (cachedConfig) {
     return cachedConfig;
@@ -32,7 +44,7 @@ export function loadConfig(): Config {
     google: {
       projectId: process.env.GOOGLE_PROJECT_ID,
       clientEmail: process.env.GOOGLE_CLIENT_EMAIL,
-      privateKey: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+      privateKey: cleanPrivateKey(process.env.GOOGLE_PRIVATE_KEY),
       sheetId: process.env.GOOGLE_SHEET_ID,
     },
     session: {
