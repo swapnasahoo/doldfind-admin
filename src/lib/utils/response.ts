@@ -17,6 +17,17 @@ export interface SuccessResponse {
 }
 
 /**
+ * Security headers configured for all API responses.
+ */
+const SECURITY_HEADERS = {
+  "Content-Type": "application/json",
+  "X-Content-Type-Options": "nosniff",
+  "X-Frame-Options": "DENY",
+  "Referrer-Policy": "no-referrer",
+  "X-XSS-Protection": "1; mode=block",
+};
+
+/**
  * Standard utility to return structured JSON error responses.
  */
 export function jsonError(code: string, message: string, status = 400, details?: unknown): NextResponse<ErrorResponse> {
@@ -28,7 +39,10 @@ export function jsonError(code: string, message: string, status = 400, details?:
       ...(details !== undefined && { details }),
     },
   };
-  return NextResponse.json(body, { status });
+  return NextResponse.json(body, {
+    status,
+    headers: SECURITY_HEADERS,
+  });
 }
 
 /**
@@ -41,5 +55,8 @@ export function jsonSuccess(message: string, submissionId?: string, status = 200
     ...(submissionId !== undefined && { submissionId }),
     ...(data !== undefined && { data }),
   };
-  return NextResponse.json(body, { status });
+  return NextResponse.json(body, {
+    status,
+    headers: SECURITY_HEADERS,
+  });
 }

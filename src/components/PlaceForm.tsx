@@ -21,6 +21,7 @@ export const PlaceForm: React.FC = () => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewData, setPreviewData] = useState<PlaceDetails | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<PlaceDetails | null>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   const {
     register,
@@ -60,21 +61,59 @@ export const PlaceForm: React.FC = () => {
     setIsPreviewOpen(true);
   };
 
-  const onSubmit = (data: PlaceFormValues) => {
-    // Parser converts raw values to final PlaceDetails format
-    const normalized = normalizePlaceDetails(data);
-    setSubmitSuccess(normalized);
-    // Scroll to success banner
+  const onSubmit = async (data: PlaceFormValues) => {
+    setApiError(null);
+    setSubmitSuccess(null);
+    try {
+      const res = await fetch("/api/places/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      const result = await res.json();
+
+      if (res.ok && result.success) {
+        const normalized = normalizePlaceDetails(data);
+        if (result.submissionId) {
+          normalized.id = result.submissionId;
+        }
+        setSubmitSuccess(normalized);
+      } else {
+        setApiError(result.error?.message || "An unexpected error occurred during submission.");
+      }
+    } catch (err) {
+      setApiError("Failed to connect to the server. Please check your network and try again.");
+    }
+    // Scroll to success/error banner
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleReset = () => {
     reset();
     setSubmitSuccess(null);
+    setApiError(null);
   };
 
   return (
     <div className="w-full flex flex-col gap-6">
+      {/* Error Alert */}
+      {apiError && (
+        <div className="bg-red-955/60 border border-red-800/80 rounded-xl p-5 md:p-6 backdrop-blur-md flex gap-3 animate-fadeIn">
+          <AlertTriangle className="w-6 h-6 text-red-400 flex-shrink-0 mt-0.5" />
+          <div className="flex flex-col gap-1">
+            <h4 className="text-sm font-bold text-red-300">
+              Submission Failed
+            </h4>
+            <p className="text-xs text-red-450/80 leading-relaxed">
+              {apiError}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Success Alert */}
       {submitSuccess && (
         <div className="bg-emerald-950/60 border border-emerald-800/80 rounded-xl p-5 md:p-6 backdrop-blur-md flex flex-col md:flex-row items-start justify-between gap-4 animate-fadeIn">
@@ -82,10 +121,10 @@ export const PlaceForm: React.FC = () => {
             <CheckCircle2 className="w-6 h-6 text-emerald-400 flex-shrink-0 mt-0.5" />
             <div className="flex flex-col gap-1">
               <h4 className="text-sm font-bold text-emerald-300">
-                Place details submitted successfully! (Simulated)
+                Place details submitted successfully!
               </h4>
               <p className="text-xs text-emerald-400/80 max-w-2xl leading-relaxed">
-                The form input has been successfully parsed and normalized. In production, this payload will be processed by the DoldFind backend API.
+                The contribution has been successfully processed, validated, and saved to the DoldFind Google Sheets queue.
               </p>
               <div className="mt-3 flex gap-2">
                 <Button

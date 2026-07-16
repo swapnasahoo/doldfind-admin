@@ -3,7 +3,10 @@ import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 
 // Retrieve the session secret for verification in edge middleware.
-const secretText = process.env.JWT_SESSION_SECRET || "";
+const secretText = process.env.JWT_SESSION_SECRET || process.env.SESSION_SECRET || "";
+if (!secretText || secretText.length < 32) {
+  throw new Error("JWT_SESSION_SECRET is not configured or is too short. It must be at least 32 characters long.");
+}
 const encodedSecret = new TextEncoder().encode(secretText);
 
 export async function middleware(request: NextRequest) {
@@ -21,7 +24,7 @@ export async function middleware(request: NextRequest) {
   if (path.startsWith("/api/")) {
     const sessionCookie = request.cookies.get("session")?.value;
 
-    if (!sessionCookie) {
+    if (!sessionCookie || sessionCookie.trim() === "") {
       return NextResponse.json(
         {
           success: false,
@@ -35,10 +38,16 @@ export async function middleware(request: NextRequest) {
     }
 
     try {
-      // Verify JWT session signature and expiration
-      await jwtVerify(sessionCookie, encodedSecret, {
+      // Verify JWT session signature, expiration, and algorithms explicitly
+      const { payload } = await jwtVerify(sessionCookie, encodedSecret, {
         algorithms: ["HS256"],
       });
+
+      // Prevent token forgery by ensuring payload contains necessary identifiers
+      if (!payload || typeof payload !== "object" || !payload.username) {
+        throw new Error("Invalid payload structure");
+      }
+
       return NextResponse.next();
     } catch (error) {
       return NextResponse.json(

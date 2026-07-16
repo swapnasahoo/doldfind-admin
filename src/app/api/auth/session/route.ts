@@ -12,11 +12,23 @@ export async function GET(request: NextRequest) {
     // Attempt renewal if close to expiration
     await renewSessionCookieIfNeeded(session);
 
-    return jsonSuccess("Session active.", undefined, 200, {
+    const res = jsonSuccess("Session active.", undefined, 200, {
       username: session.username,
       badge: session.badge,
     });
+    res.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.headers.set("Pragma", "no-cache");
+    res.headers.set("Expires", "0");
+    return res;
   } catch (error) {
     return jsonError("INTERNAL_ERROR", "Failed to retrieve session.", 500);
   }
 }
+
+// Fallback handlers to reject unsupported methods
+export async function POST() { return jsonError("METHOD_NOT_ALLOWED", "Method not allowed.", 405); }
+export async function PUT() { return jsonError("METHOD_NOT_ALLOWED", "Method not allowed.", 405); }
+export async function DELETE() { return jsonError("METHOD_NOT_ALLOWED", "Method not allowed.", 405); }
+export async function PATCH() { return jsonError("METHOD_NOT_ALLOWED", "Method not allowed.", 405); }
+export async function HEAD() { return jsonError("METHOD_NOT_ALLOWED", "Method not allowed.", 405); }
+export async function OPTIONS() { return jsonError("METHOD_NOT_ALLOWED", "Method not allowed.", 405); }

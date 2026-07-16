@@ -4,6 +4,15 @@ import { PlaceRepository, PlaceSubmissionAudit } from "./placeRepository.interfa
 import { config } from "../config";
 import { Logger } from "../logger";
 
+function escapeFormula(val: string): string {
+  if (!val) return "";
+  const formulaChars = ["=", "+", "-", "@", "\t", "\r"];
+  if (formulaChars.some((char) => val.startsWith(char))) {
+    return `'${val}`;
+  }
+  return val;
+}
+
 export class GoogleSheetsPlaceRepository implements PlaceRepository {
   private sheets;
 
@@ -22,11 +31,11 @@ export class GoogleSheetsPlaceRepository implements PlaceRepository {
   }
 
   /**
-   * Formats information cards array into readable text string.
+   * Formats information cards array into readable text string, escaping labels and values.
    */
   private formatInfoCards(cards: PlaceDetails["infoCards"]): string {
     if (!cards || cards.length === 0) return "";
-    return cards.map((card) => `${card.label}: ${card.value};`).join(" ");
+    return cards.map((card) => `${escapeFormula(card.label)}: ${escapeFormula(card.value)};`).join(" ");
   }
 
   /**
@@ -42,16 +51,16 @@ export class GoogleSheetsPlaceRepository implements PlaceRepository {
         audit.submittedBy,
         audit.badge,
         place.id,
-        place.title,
-        place.categories.join(", "),
-        place.description,
-        place.location,
+        escapeFormula(place.title),
+        place.categories.map(escapeFormula).join(", "),
+        escapeFormula(place.description),
+        escapeFormula(place.location),
         place.coordinates.lat,
         place.coordinates.long,
         infoCardsFormatted,
         place.uploader.username,
         place.uploader.badge,
-        place.safetyNote,
+        escapeFormula(place.safetyNote),
       ];
 
       Logger.info(`Saving place submission to Google Sheet. SpreadsheetId: ${config.google.sheetId}`);
@@ -68,7 +77,7 @@ export class GoogleSheetsPlaceRepository implements PlaceRepository {
       Logger.info(`Place successfully appended to Google Sheet with Submission ID: ${audit.submissionId}`);
       return audit.submissionId;
     } catch (error) {
-      Logger.error(`Failed to save place details in Google Sheets Repository:`, error);
+      Logger.error(`Failed to save place details in Google Sheets Repository: (Raw details omitted for safety)`);
       throw new Error("Persistence error writing details to storage.");
     }
   }

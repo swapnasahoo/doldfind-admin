@@ -75,12 +75,33 @@ export async function getSession(): Promise<SessionPayload | null> {
   if (!token) return null;
 
   const session = await decryptSession(token);
-  if (!session) return null;
+  if (!session) {
+    try {
+      cookieStore.delete(COOKIE_NAME);
+    } catch {}
+    return null;
+  }
 
   // Verify expiration time
   const now = Date.now();
   if (session.expiresAt * 1000 < now) {
     Logger.warn(`Session expired for user: ${session.username}`);
+    try {
+      cookieStore.delete(COOKIE_NAME);
+    } catch {}
+    return null;
+  }
+
+  // Verify that the user is currently an authorized founder
+  const usernameLower = session.username.toLowerCase();
+  const founderExists = config.founders.some(
+    (f) => f.username.toLowerCase() === usernameLower
+  );
+  if (!founderExists) {
+    Logger.warn(`Session contains unauthorized user: ${session.username}`);
+    try {
+      cookieStore.delete(COOKIE_NAME);
+    } catch {}
     return null;
   }
 
