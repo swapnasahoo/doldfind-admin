@@ -255,12 +255,12 @@ export function mapPlaceDetailsToFormValues(place: PlaceDetails): PlaceFormValue
 
   const bestTimings = parseTimeSlots(bestTimingsStr);
   const closedDays =
-    closedDaysStr === "Never Closed"
+    (closedDaysStr === "Never Closed"
       ? ["Never Closed"]
       : closedDaysStr
           .split(",")
           .map((d) => d.trim())
-          .filter(Boolean);
+          .filter(Boolean)) as PlaceFormValues["closedDays"];
 
   const customCards = place.infoCards
     .filter(

@@ -61,7 +61,16 @@ export interface PlaceFormValues {
   // Information Fields
   mainCategory: string;
   bestTimings: number[];
-  closedDays: string[];
+  closedDays: (
+    | "Monday"
+    | "Tuesday"
+    | "Wednesday"
+    | "Thursday"
+    | "Friday"
+    | "Saturday"
+    | "Sunday"
+    | "Never Closed"
+  )[];
   nearestMetro: string;
   crowdLevel: string;
   
