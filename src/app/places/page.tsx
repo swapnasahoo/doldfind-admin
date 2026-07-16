@@ -370,6 +370,17 @@ export default function PlacesManagement() {
             </button>
           </div>
         </div>
+        {/* Mobile Navigation sub-bar */}
+        <div className="md:hidden border-t border-slate-900 bg-slate-950/30">
+          <div className="max-w-7xl mx-auto px-4 flex items-center justify-center gap-6 h-10 text-[10px] font-bold uppercase tracking-wider select-none">
+            <Link href="/" className="text-slate-400 hover:text-slate-200 transition px-2 py-1.5">
+              Contribute Spot
+            </Link>
+            <Link href="/places" className="text-violet-400 border-b-2 border-violet-500 px-2 py-1.5 transition">
+              Manage Database
+            </Link>
+          </div>
+        </div>
       </header>
 
       {/* Main Content Area */}
