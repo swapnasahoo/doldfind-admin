@@ -91,7 +91,7 @@ const WEEK_DAYS = [
 ];
 
 // Crowd Levels
-const CROWD_LEVELS = ["Very Low", "Low", "Medium", "High", "Very High"];
+const CROWD_LEVELS = ["Low", "Medium", "High"];
 
 export const QuickInfoSection: React.FC<QuickInfoSectionProps> = ({
   control,

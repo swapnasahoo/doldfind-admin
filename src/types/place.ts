@@ -63,7 +63,7 @@ export interface PlaceFormValues {
     | "Never Closed"
   )[];
   nearestMetro: string;
-  crowdLevel: string;
+  crowdLevel: "Low" | "Medium" | "High" | "";
   safetyNote: string;
   entryFee: string;
   ticketRequired: "Yes" | "No" | "";

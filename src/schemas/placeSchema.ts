@@ -100,9 +100,10 @@ export const placeSchema = z
       .min(1, { message: "Nearest metro is required" })
       .max(100, { message: "Nearest metro cannot exceed 100 characters" }),
     crowdLevel: z
-      .string()
-      .min(1, { message: "Crowd level is required" })
-      .max(50, { message: "Crowd level cannot exceed 50 characters" }),
+      .enum(["Low", "Medium", "High", ""])
+      .refine((val) => val === "Low" || val === "Medium" || val === "High", {
+        message: "Crowd level must be Low, Medium, or High",
+      }),
     safetyNote: z
       .string()
       .min(1, { message: "Safety note is required" })

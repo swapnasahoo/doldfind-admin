@@ -215,7 +215,7 @@ export function mapPlaceDetailsToFormValues(place: PlaceDetails): PlaceFormValue
     bestTimings,
     closedDays,
     nearestMetro: place.nearestMetro || "",
-    crowdLevel: place.crowdLevel || "",
+    crowdLevel: (place.crowdLevel as PlaceFormValues["crowdLevel"]) || "",
     safetyNote: place.safetyNote || "",
     entryFee,
     ticketRequired,
