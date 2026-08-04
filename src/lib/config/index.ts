@@ -1,14 +1,16 @@
 import { z } from "zod";
 
 const configSchema = z.object({
-  google: z.object({
-    projectId: z.string().min(1, "GOOGLE_PROJECT_ID is required"),
-    clientEmail: z.string().email("GOOGLE_CLIENT_EMAIL must be a valid email"),
-    privateKey: z.string().min(1, "GOOGLE_PRIVATE_KEY is required"),
-    sheetId: z.string().min(1, "GOOGLE_SHEET_ID is required"),
-  }),
   session: z.object({
     secret: z.string().min(32, "JWT_SESSION_SECRET must be at least 32 characters long"),
+  }),
+  appwrite: z.object({
+    endpoint: z.string().default("https://cloud.appwrite.io/v1"),
+    projectId: z.string().optional().default(""),
+    apiKey: z.string().optional().default(""),
+    databaseId: z.string().optional().default("doldfind-db"),
+    collectionId: z.string().optional().default("places"),
+    bucketId: z.string().optional().default("place-images"),
   }),
   founders: z.array(
     z.object({
@@ -23,32 +25,22 @@ export type Config = z.infer<typeof configSchema>;
 
 let cachedConfig: Config | null = null;
 
-function cleanPrivateKey(key: string | undefined): string {
-  if (!key) return "";
-  let cleaned = key.trim();
-  if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
-    cleaned = cleaned.substring(1, cleaned.length - 1);
-  }
-  if (cleaned.startsWith("'") && cleaned.endsWith("'")) {
-    cleaned = cleaned.substring(1, cleaned.length - 1);
-  }
-  return cleaned.replace(/\\n/g, "\n").trim();
-}
-
 export function loadConfig(): Config {
   if (cachedConfig) {
     return cachedConfig;
   }
 
   const rawConfig = {
-    google: {
-      projectId: process.env.GOOGLE_PROJECT_ID,
-      clientEmail: process.env.GOOGLE_CLIENT_EMAIL,
-      privateKey: cleanPrivateKey(process.env.GOOGLE_PRIVATE_KEY),
-      sheetId: process.env.GOOGLE_SHEET_ID,
-    },
     session: {
       secret: process.env.JWT_SESSION_SECRET || process.env.SESSION_SECRET,
+    },
+    appwrite: {
+      endpoint: process.env.APPWRITE_ENDPOINT || "https://cloud.appwrite.io/v1",
+      projectId: process.env.APPWRITE_PROJECT_ID || "",
+      apiKey: process.env.APPWRITE_API_KEY || "",
+      databaseId: process.env.APPWRITE_DATABASE_ID || "doldfind-db",
+      collectionId: process.env.APPWRITE_COLLECTION_ID || "places",
+      bucketId: process.env.APPWRITE_BUCKET_ID || "place-images",
     },
     founders: [
       {
