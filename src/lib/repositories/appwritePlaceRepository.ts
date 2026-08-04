@@ -59,6 +59,7 @@ export class AppwritePlaceRepository implements PlaceRepository {
         saves: place.saves || 0,
         visited: place.visited || 0,
         uploaderId: place.uploaderId,
+        uploaderBadge: place.uploaderBadge || "Founder",
         createdAt: place.createdAt,
         updatedAt: place.updatedAt,
       };
@@ -113,6 +114,7 @@ export class AppwritePlaceRepository implements PlaceRepository {
         saves: typeof doc.saves === "number" ? doc.saves : 0,
         visited: typeof doc.visited === "number" ? doc.visited : 0,
         uploaderId: doc.uploaderId || "Admin",
+        uploaderBadge: doc.uploaderBadge || doc.badge || "Founder",
         createdAt: doc.$createdAt || doc.createdAt || new Date().toISOString(),
         updatedAt: doc.$updatedAt || doc.updatedAt || new Date().toISOString(),
       }));
@@ -150,6 +152,7 @@ export class AppwritePlaceRepository implements PlaceRepository {
         saves: place.saves,
         visited: place.visited,
         uploaderId: place.uploaderId,
+        uploaderBadge: place.uploaderBadge || "Founder",
         updatedAt: new Date().toISOString(),
       };
 

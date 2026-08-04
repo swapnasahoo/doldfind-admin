@@ -124,6 +124,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       saves: typeof body.saves === "number" ? body.saves : 0,
       visited: typeof body.visited === "number" ? body.visited : 0,
       uploaderId: username,
+      uploaderBadge: badge,
       createdAt: body.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

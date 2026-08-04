@@ -52,6 +52,7 @@ export class PlaceSubmissionService {
       saves: 0,
       visited: 0,
       uploaderId: uploader.username,
+      uploaderBadge: uploader.badge,
       createdAt: submittedAt,
       updatedAt: submittedAt,
     };

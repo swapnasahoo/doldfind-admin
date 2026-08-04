@@ -30,6 +30,7 @@ export interface PlaceDetails {
   visited: number;
 
   uploaderId: string;
+  uploaderBadge: string;
 
   createdAt: string;
   updatedAt: string;

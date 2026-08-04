@@ -721,10 +721,15 @@ export default function PlacesManagement() {
 
                   {/* Submitted / Uploader Footer */}
                   <div className="border-t border-slate-850 pt-2.5 mt-auto flex items-center justify-between text-[9px] text-slate-500 select-text">
-                    <div className="flex items-center gap-1 select-none">
+                    <div className="flex items-center gap-1.5 select-none">
                       <User className="w-3 h-3 text-slate-600" />
                       <span>by </span>
-                      <span className="font-bold text-slate-450">{place.uploaderId || "Admin"}</span>
+                      <span className="font-bold text-slate-300">{place.uploaderId || "Admin"}</span>
+                      {place.uploaderBadge && (
+                        <span className="px-1.5 py-0.5 rounded text-[8px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                          {place.uploaderBadge}
+                        </span>
+                      )}
                     </div>
                     <div className="text-slate-600 font-mono text-[8px]">
                       ID: {(place.id || "").substring(0, 8)}...

@@ -130,6 +130,7 @@ export function normalizePlaceDetails(formValues: PlaceFormValues): PlaceDetails
     visited: 0,
 
     uploaderId: "",
+    uploaderBadge: "Founder",
     createdAt: now,
     updatedAt: now,
   };
