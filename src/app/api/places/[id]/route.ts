@@ -108,6 +108,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       placeType: parsed.placeType,
       mainCategory: parsed.mainCategory,
       categories: parsed.categories,
+      images: parsed.images,
       city: parsed.city,
       area: parsed.area,
       state: parsed.state,
