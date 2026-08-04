@@ -66,4 +66,5 @@ export interface PlaceFormValues {
   safetyNote: string;
   entryFee: string;
   ticketRequired: "Yes" | "No" | "";
+  infoCards?: { label: string; value: string }[];
 }

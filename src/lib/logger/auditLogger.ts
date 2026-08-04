@@ -12,7 +12,9 @@ export interface AuditLogParams {
     | "AUTH_FAILED"
     | "PLACE_VIEWED"
     | "PLACE_EDITED"
-    | "PLACE_DELETED";
+    | "PLACE_DELETED"
+    | "FILE_UPLOADED"
+    | "FILE_UPLOAD_FAILED";
   username: string;
   badge?: string;
   ip: string;

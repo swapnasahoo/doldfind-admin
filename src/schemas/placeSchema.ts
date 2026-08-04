@@ -12,7 +12,7 @@ export const placeSchema = z
       .string()
       .min(10, { message: "Description must be at least 10 characters long" })
       .max(5000, { message: "Description cannot exceed 5000 characters" }),
-    placeType: z.enum(["Spot", "Cafe", "Market"], {
+    placeType: z.enum(["Spot", "Cafe", "Market", ""]).refine((val) => val === "Spot" || val === "Cafe" || val === "Market", {
       message: "Place type must be Spot, Cafe, or Market",
     }),
     mainCategory: z
@@ -111,6 +111,14 @@ export const placeSchema = z
     ticketRequired: z.enum(["Yes", "No", ""]).refine((val) => val === "Yes" || val === "No", {
       message: "Select whether a ticket is required",
     }),
+    infoCards: z
+      .array(
+        z.object({
+          label: z.string(),
+          value: z.string(),
+        })
+      )
+      .optional(),
   })
   .strict()
   .superRefine((data, ctx) => {
