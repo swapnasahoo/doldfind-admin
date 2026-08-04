@@ -1,5 +1,5 @@
-import { PlaceFormValues } from "@/types/place";
-import { mergeTimeSlots } from "@/utils/parser"; // Reusing the UI time slot merging helper
+import { PlaceFormValues, PlaceType } from "@/types/place";
+import { mergeTimeSlots } from "@/utils/parser";
 
 /**
  * Normalizes unicode strings and collapses multiple spaces.
@@ -7,24 +7,21 @@ import { mergeTimeSlots } from "@/utils/parser"; // Reusing the UI time slot mer
 export function cleanString(val: string): string {
   if (!val) return "";
   return val
-    .normalize("NFC") // Normalize unicode characters
-    .replace(/\r\n/g, "\n") // Standardize newlines
-    .replace(/\s+/g, " ") // Collapse repeated whitespace into single space
+    .normalize("NFC")
+    .replace(/\r\n/g, "\n")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
 /**
- * Sanitizes and normalizes incoming place form inputs.
- * Enforces mutual exclusivity and removes duplicate entries.
+ * Sanitizes and normalizes incoming place form inputs into the standard schema.
  */
 export function parseIncomingPayload(data: PlaceFormValues) {
-  const title = cleanString(data.title);
+  const placeName = cleanString(data.placeName);
   const description = cleanString(data.description);
-  const location = cleanString(data.location);
-  const latitude = cleanString(data.latitude);
-  const longitude = cleanString(data.longitude);
-  const safetyNote = cleanString(data.safetyNote);
-  
+  const placeType = cleanString(data.placeType) as PlaceType;
+  const mainCategory = cleanString(data.mainCategory);
+
   // Normalize Categories
   let categories = Array.from(
     new Set(
@@ -34,64 +31,62 @@ export function parseIncomingPayload(data: PlaceFormValues) {
     )
   );
 
-  // Categories Mutual Exclusivity Check
   if (categories.includes("Free") && categories.includes("Paid")) {
     categories = categories.filter((c) => c !== "Paid");
   }
 
-  const mainCategory = cleanString(data.mainCategory);
+  // Normalize Images
+  const images = Array.from(
+    new Set(
+      (data.images || [])
+        .map((img) => cleanString(img))
+        .filter((img) => img.length > 0)
+    )
+  );
+
+  const city = cleanString(data.city);
+  const area = cleanString(data.area);
+  const state = cleanString(data.state);
+
+  const latitude = cleanString(data.latitude);
+  const longitude = cleanString(data.longitude);
+
+  const bestTimings = mergeTimeSlots(data.bestTimings || []);
+  const closedOn = data.closedDays?.includes("Never Closed")
+    ? "Never Closed"
+    : (data.closedDays || []).join(", ");
   const nearestMetro = cleanString(data.nearestMetro);
   const crowdLevel = cleanString(data.crowdLevel);
-  const fee = cleanString(data.fee);
+  const safetyNote = cleanString(data.safetyNote);
 
-  // Generate standardized card list
-  let feeValue = "";
-  if (!fee) {
-    feeValue =
+  const rawFee = cleanString(data.entryFee);
+  let entryFee = "";
+  if (!rawFee) {
+    entryFee =
       data.ticketRequired === "Yes"
         ? "FREE - TICKET REQUIRED"
         : "FREE - NO TICKET REQUIRED";
   } else {
-    feeValue = fee;
+    entryFee = rawFee;
   }
 
-  const standardCards = [
-    { label: "Main Category", value: mainCategory, isFee: false },
-    { label: "Best Timings", value: mergeTimeSlots(data.bestTimings || []), isFee: false },
-    { label: "Closed On", value: data.closedDays?.includes("Never Closed") ? "Never Closed" : (data.closedDays || []).join(", "), isFee: false },
-    { label: "Nearest Metro", value: nearestMetro, isFee: false },
-    { label: "Crowd Level", value: crowdLevel, isFee: false },
-    { label: "Safety Note", value: safetyNote, isFee: false },
-    { label: "Fee", value: feeValue, isFee: true },
-  ];
-
-  const standardLabels = standardCards.map((c) => c.label.toLowerCase());
-
-  // Filter custom cards (trim, ignore duplicate standard fields and blank cards)
-  const customCards = (data.infoCards || [])
-    .map((card) => ({
-      label: cleanString(card.label),
-      value: cleanString(card.value),
-      isFee: false, // Custom cards are strictly false
-    }))
-    .filter(
-      (card) =>
-        (card.label.length > 0 || card.value.length > 0) &&
-        !standardLabels.includes(card.label.toLowerCase())
-    );
-
-  const infoCards = [...standardCards, ...customCards];
-
   return {
-    title,
-    categories,
+    placeName,
     description,
-    location,
-    coordinates: {
-      lat: latitude,
-      long: longitude,
-    },
-    infoCards,
+    placeType,
+    mainCategory,
+    categories,
+    images,
+    city,
+    area,
+    state,
+    latitude,
+    longitude,
+    bestTimings,
+    closedOn,
+    nearestMetro,
+    crowdLevel,
     safetyNote,
+    entryFee,
   };
 }
