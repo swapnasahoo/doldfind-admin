@@ -1,7 +1,7 @@
 export type PlaceType = "Spot" | "Cafe" | "Market";
 
 export interface PlaceDetails {
-  id: string;
+  id?: string;
 
   placeName: string;
   description: string;
@@ -32,8 +32,8 @@ export interface PlaceDetails {
   uploaderId: string;
   uploaderBadge: string;
 
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface PlaceFormValues {

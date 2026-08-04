@@ -30,7 +30,6 @@ export class PlaceSubmissionService {
     const submittedAt = new Date().toISOString();
 
     const placeDetails: PlaceDetails = {
-      id: placeId,
       placeName: parsed.placeName,
       description: parsed.description,
       placeType: parsed.placeType,
@@ -53,8 +52,6 @@ export class PlaceSubmissionService {
       visited: 0,
       uploaderId: uploader.username,
       uploaderBadge: uploader.badge,
-      createdAt: submittedAt,
-      updatedAt: submittedAt,
     };
 
     const auditLog: PlaceSubmissionAudit = {

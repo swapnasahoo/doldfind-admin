@@ -125,8 +125,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       visited: typeof body.visited === "number" ? body.visited : 0,
       uploaderId: username,
       uploaderBadge: badge,
-      createdAt: body.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
     };
 
     // 7. Persist update in repository

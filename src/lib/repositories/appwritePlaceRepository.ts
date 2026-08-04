@@ -60,8 +60,6 @@ export class AppwritePlaceRepository implements PlaceRepository {
         visited: place.visited || 0,
         uploaderId: place.uploaderId,
         uploaderBadge: place.uploaderBadge || "Founder",
-        createdAt: place.createdAt,
-        updatedAt: place.updatedAt,
       };
 
       const doc = await this.databases.createDocument(
@@ -153,7 +151,6 @@ export class AppwritePlaceRepository implements PlaceRepository {
         visited: place.visited,
         uploaderId: place.uploaderId,
         uploaderBadge: place.uploaderBadge || "Founder",
-        updatedAt: new Date().toISOString(),
       };
 
       await this.databases.updateDocument(

@@ -49,9 +49,15 @@ export class JsonPlaceRepository implements PlaceRepository {
     await this.ensureStorageExists();
     try {
       const places = await this.findAll();
-      places.unshift(place);
+      const placeRecord: PlaceDetails = {
+        ...place,
+        id: place.id || audit.submissionId,
+        createdAt: place.createdAt || audit.submittedAt,
+        updatedAt: place.updatedAt || audit.submittedAt,
+      };
+      places.unshift(placeRecord);
       await fs.writeFile(FILE_PATH, JSON.stringify(places, null, 2), "utf-8");
-      Logger.info(`Place ID ${place.id} saved successfully to local JSON database.`);
+      Logger.info(`Place ID ${placeRecord.id} saved successfully to local JSON database.`);
       return audit.submissionId;
     } catch (error) {
       Logger.error("Failed to save place into local JSON storage:", error);
