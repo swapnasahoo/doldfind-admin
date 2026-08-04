@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, FileCode, CheckCircle2, AlertTriangle, RefreshCw } from "lucide-react";
@@ -8,15 +8,14 @@ import { Eye, FileCode, CheckCircle2, AlertTriangle, RefreshCw } from "lucide-re
 import { placeSchema } from "@/schemas/placeSchema";
 import { PlaceFormValues, PlaceDetails } from "@/types/place";
 import { normalizePlaceDetails, mapPlaceDetailsToFormValues } from "@/utils/parser";
-import { useEffect } from "react";
 
 import { Input } from "./ui/Input";
 import { Textarea } from "./ui/Textarea";
 import { Button } from "./ui/Button";
 import { MultiSelect } from "./ui/MultiSelect";
 import { Modal } from "./ui/Modal";
-import { InfoCardsArray } from "./InfoCardsArray";
 import { QuickInfoSection } from "./QuickInfoSection";
+import { ImageSection } from "./ImageSection";
 
 interface PlaceFormProps {
   initialPlace?: PlaceDetails;
@@ -45,20 +44,23 @@ export const PlaceForm: React.FC<PlaceFormProps> = ({
     resolver: zodResolver(placeSchema),
     mode: "onTouched",
     defaultValues: {
-      title: "",
-      categories: [],
+      placeName: "",
       description: "",
-      location: "",
+      placeType: "Spot",
+      mainCategory: "",
+      categories: [],
+      images: [],
+      city: "",
+      area: "",
+      state: "",
       latitude: "",
       longitude: "",
-      infoCards: [],
-      safetyNote: "",
-      mainCategory: "",
       bestTimings: [],
       closedDays: [],
       nearestMetro: "",
       crowdLevel: "",
-      fee: "",
+      safetyNote: "",
+      entryFee: "",
       ticketRequired: "",
     },
   });
@@ -69,29 +71,30 @@ export const PlaceForm: React.FC<PlaceFormProps> = ({
       reset(mapPlaceDetailsToFormValues(initialPlace));
     } else {
       reset({
-        title: "",
-        categories: [],
+        placeName: "",
         description: "",
-        location: "",
+        placeType: "Spot",
+        mainCategory: "",
+        categories: [],
+        images: [],
+        city: "",
+        area: "",
+        state: "",
         latitude: "",
         longitude: "",
-        infoCards: [],
-        safetyNote: "",
-        mainCategory: "",
         bestTimings: [],
         closedDays: [],
         nearestMetro: "",
         crowdLevel: "",
-        fee: "",
+        safetyNote: "",
+        entryFee: "",
         ticketRequired: "",
       });
     }
   }, [initialPlace, reset]);
 
   const handleOpenPreview = () => {
-    // Get raw form values
     const rawValues = getValues();
-    // Normalize using our parser utility
     const normalized = normalizePlaceDetails(rawValues);
     setPreviewData(normalized);
     setIsPreviewOpen(true);
@@ -119,7 +122,9 @@ export const PlaceForm: React.FC<PlaceFormProps> = ({
         const normalized = normalizePlaceDetails(data);
         if (isEdit) {
           normalized.id = initialPlace.id;
-          normalized.uploader = initialPlace.uploader;
+          normalized.uploaderId = initialPlace.uploaderId;
+          normalized.createdAt = initialPlace.createdAt;
+          normalized.updatedAt = new Date().toISOString();
           if (onSuccess) {
             onSuccess(normalized);
           }
@@ -135,7 +140,6 @@ export const PlaceForm: React.FC<PlaceFormProps> = ({
     } catch (err) {
       setApiError("Failed to connect to the server. Please check your network and try again.");
     }
-    // Scroll to success/error banner
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -172,7 +176,7 @@ export const PlaceForm: React.FC<PlaceFormProps> = ({
                 Place details submitted successfully!
               </h4>
               <p className="text-xs text-emerald-400/80 max-w-2xl leading-relaxed">
-                The contribution has been successfully processed, validated, and saved to the DoldFind Google Sheets queue.
+                The contribution has been successfully processed, validated, and saved to the DoldFind database queue.
               </p>
               <div className="mt-3 flex gap-2">
                 <Button
@@ -213,12 +217,12 @@ export const PlaceForm: React.FC<PlaceFormProps> = ({
                 Core Information
               </h3>
 
-              {/* Title */}
+              {/* Place Name */}
               <Input
-                label="Place Title"
-                placeholder="e.g. Secret Hidden Waterfall, Cozy Peak Lookout"
-                error={errors.title?.message}
-                {...register("title")}
+                label="Place Name"
+                placeholder="e.g. Secret Hidden Waterfall, Cozy Peak Lookout, Central Cafe"
+                error={errors.placeName?.message}
+                {...register("placeName")}
               />
 
               {/* Categories */}
@@ -228,7 +232,7 @@ export const PlaceForm: React.FC<PlaceFormProps> = ({
                 render={({ field }) => (
                   <MultiSelect
                     label="Categories"
-                    placeholder="Search or add categories (e.g. Waterfall, Nature)"
+                    placeholder="Search or add categories (e.g. Waterfall, Nature, Organic)"
                     selected={field.value}
                     onChange={field.onChange}
                     error={errors.categories?.message}
@@ -239,11 +243,14 @@ export const PlaceForm: React.FC<PlaceFormProps> = ({
               {/* Description */}
               <Textarea
                 label="Description"
-                placeholder="Share instructions, history, or vibe of this spot..."
+                placeholder="Share instructions, history, atmosphere, or vibe of this place..."
                 error={errors.description?.message}
                 {...register("description")}
               />
             </div>
+
+            {/* Images & Gallery Section */}
+            <ImageSection control={control} errors={errors} />
 
             {/* Quick Information Section */}
             <QuickInfoSection
@@ -251,30 +258,14 @@ export const PlaceForm: React.FC<PlaceFormProps> = ({
               register={register}
               errors={errors}
             />
-
-            {/* Information Cards Array */}
-            <InfoCardsArray
-              control={control}
-              register={register}
-              errors={errors}
-            />
           </div>
 
-          {/* Right Column - Location & Extras */}
+          {/* Right Column - Geolocation */}
           <div className="flex flex-col gap-6">
-            {/* Geolocation Card */}
             <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-5 md:p-6 backdrop-blur-md flex flex-col gap-5">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-slate-300 border-b border-slate-850 pb-2">
-                Location & Coordinates
+              <h3 className="text-sm font-bold uppercase tracking-wider text-slate-350 border-b border-slate-850 pb-2">
+                Coordinates
               </h3>
-
-              {/* Location Name */}
-              <Input
-                label="Location Name"
-                placeholder="e.g. Big Sur, California"
-                error={errors.location?.message}
-                {...register("location")}
-              />
 
               {/* Coordinates Grid */}
               <div className="grid grid-cols-2 gap-4">
@@ -294,7 +285,7 @@ export const PlaceForm: React.FC<PlaceFormProps> = ({
 
               <div className="bg-slate-950/50 rounded-lg p-3.5 border border-slate-850">
                 <p className="text-[10px] text-slate-500 leading-relaxed">
-                  Coordinates must be in decimal format. Example: Latitude: 37.7749, Longitude: -122.4194. Check your GPS or maps tool to acquire precise values.
+                  Coordinates must be decimal format (Latitude: -90 to 90, Longitude: -180 to 180). Check GPS or maps to acquire precise values.
                 </p>
               </div>
             </div>
