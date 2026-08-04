@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { checkRateLimit } from "@/lib/security";
-import { GoogleSheetsPlaceRepository } from "@/lib/repositories/googleSheetsPlaceRepository";
+import { getPlaceRepository } from "@/lib/repositories/getPlaceRepository";
 import { Logger } from "@/lib/logger";
 import { AuditLogger } from "@/lib/logger/auditLogger";
 import { jsonError, jsonSuccess } from "@/lib/utils/response";
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const repository = new GoogleSheetsPlaceRepository();
+    const repository = getPlaceRepository();
     const places = await repository.findAll();
 
     AuditLogger.log({
@@ -63,7 +63,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Fallback handlers to reject unsupported methods
 export async function POST() { return jsonError("METHOD_NOT_ALLOWED", "Method not allowed.", 405); }
 export async function PUT() { return jsonError("METHOD_NOT_ALLOWED", "Method not allowed.", 405); }
 export async function DELETE() { return jsonError("METHOD_NOT_ALLOWED", "Method not allowed.", 405); }
