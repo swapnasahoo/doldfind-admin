@@ -47,9 +47,9 @@ export class PlaceSubmissionService {
       crowdLevel: parsed.crowdLevel,
       safetyNote: parsed.safetyNote,
       entryFee: parsed.entryFee,
-      likes: 0,
-      saves: 0,
-      visited: 0,
+      likes: "0",
+      saves: "0",
+      visited: "0",
       uploaderId: uploader.username,
       uploaderBadge: uploader.badge,
     };

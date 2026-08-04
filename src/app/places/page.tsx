@@ -714,9 +714,9 @@ export default function PlacesManagement() {
 
                   {/* Engagement & Stats Bar */}
                   <div className="flex items-center gap-4 text-[10px] text-slate-400 bg-slate-950/40 p-2 rounded-lg border border-slate-850">
-                    <span className="flex items-center gap-1"><Heart className="w-3 h-3 text-rose-400" /> {place.likes || 0}</span>
-                    <span className="flex items-center gap-1"><Bookmark className="w-3 h-3 text-amber-400" /> {place.saves || 0}</span>
-                    <span className="flex items-center gap-1"><Eye className="w-3 h-3 text-sky-400" /> {place.visited || 0}</span>
+                    <span className="flex items-center gap-1"><Heart className="w-3 h-3 text-rose-400" /> {place.likes || "0"}</span>
+                    <span className="flex items-center gap-1"><Bookmark className="w-3 h-3 text-amber-400" /> {place.saves || "0"}</span>
+                    <span className="flex items-center gap-1"><Eye className="w-3 h-3 text-sky-400" /> {place.visited || "0"}</span>
                   </div>
 
                   {/* Submitted / Uploader Footer */}

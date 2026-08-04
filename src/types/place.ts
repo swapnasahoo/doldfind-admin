@@ -25,9 +25,9 @@ export interface PlaceDetails {
   safetyNote: string;
   entryFee: string;
 
-  likes: number;
-  saves: number;
-  visited: number;
+  likes: string;
+  saves: string;
+  visited: string;
 
   uploaderId: string;
   uploaderBadge: string;

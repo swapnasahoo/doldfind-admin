@@ -120,9 +120,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       crowdLevel: parsed.crowdLevel,
       safetyNote: parsed.safetyNote,
       entryFee: parsed.entryFee,
-      likes: typeof body.likes === "number" ? body.likes : 0,
-      saves: typeof body.saves === "number" ? body.saves : 0,
-      visited: typeof body.visited === "number" ? body.visited : 0,
+      likes: String(body.likes ?? "0"),
+      saves: String(body.saves ?? "0"),
+      visited: String(body.visited ?? "0"),
       uploaderId: username,
       uploaderBadge: badge,
     };

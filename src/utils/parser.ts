@@ -125,9 +125,9 @@ export function normalizePlaceDetails(formValues: PlaceFormValues): PlaceDetails
     safetyNote: formValues.safetyNote.trim(),
     entryFee: feeValue,
 
-    likes: 0,
-    saves: 0,
-    visited: 0,
+    likes: "0",
+    saves: "0",
+    visited: "0",
 
     uploaderId: "",
     uploaderBadge: "Founder",
