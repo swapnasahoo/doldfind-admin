@@ -1,65 +1,55 @@
+export type PlaceType = "Spot" | "Cafe" | "Market";
+
 export interface PlaceDetails {
   id: string;
 
-  title: string;
-  categories: string[];
+  placeName: string;
   description: string;
 
-  location: string;
-  coordinates: {
-    lat: string;
-    long: string;
-  };
+  placeType: PlaceType;
+  mainCategory: string;
+  categories: string[];
+  images: string[];
 
-  infoCards: {
-    icon?: string;
-    label: string;
-    value: string;
-    isFee: boolean;
-  }[];
+  city: string;
+  area: string;
+  state: string;
 
+  latitude: string;
+  longitude: string;
+
+  bestTimings: string;
+  closedOn: string;
+  nearestMetro: string;
+  crowdLevel: string;
   safetyNote: string;
+  entryFee: string;
 
-  stats: {
-    likes: number;
-    saves: number;
-    visited: number;
-  };
+  likes: number;
+  saves: number;
+  visited: number;
 
-  similarSpots: {
-    id: string;
-    name: string;
-    category: string;
-  }[];
+  uploaderId: string;
 
-  uploader: {
-    username: string;
-    badge: string;
-  };
-
-  reviews: {
-    id: string;
-    username: string;
-    review: string;
-    stars: number;
-  }[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface PlaceFormValues {
-  title: string;
-  categories: string[];
+  placeName: string;
   description: string;
-  location: string;
+  placeType: PlaceType | "";
+  mainCategory: string;
+  categories: string[];
+  images: string[];
+
+  city: string;
+  area: string;
+  state: string;
+
   latitude: string;
   longitude: string;
-  infoCards: {
-    label: string;
-    value: string;
-  }[];
-  safetyNote: string;
-  
-  // Information Fields
-  mainCategory: string;
+
   bestTimings: number[];
   closedDays: (
     | "Monday"
@@ -73,8 +63,7 @@ export interface PlaceFormValues {
   )[];
   nearestMetro: string;
   crowdLevel: string;
-  
-  // Pricing Fields
-  fee: string;
+  safetyNote: string;
+  entryFee: string;
   ticketRequired: "Yes" | "No" | "";
 }
