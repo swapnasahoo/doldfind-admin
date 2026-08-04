@@ -11,7 +11,7 @@ export class PlaceSubmissionService {
   }
 
   /**
-   * Processes the raw form data, automatically appends backend parameters (defaults, IDs, session uploader, timestamps),
+   * Processes the raw form data, automatically appends backend parameters (defaults, IDs, uploaderId, timestamps),
    * validates standards, and stores the entry via the repository.
    */
   public async submit(
@@ -24,31 +24,36 @@ export class PlaceSubmissionService {
     // 1. Process and normalize values using the independent parser
     const parsed = parseIncomingPayload(rawData);
 
-    // 2. Generate backend unique IDs and default records
+    // 2. Generate backend unique IDs and timestamps
     const placeId = crypto.randomUUID();
     const submissionId = crypto.randomUUID();
     const submittedAt = new Date().toISOString();
 
     const placeDetails: PlaceDetails = {
       id: placeId,
-      title: parsed.title,
-      categories: parsed.categories,
+      placeName: parsed.placeName,
       description: parsed.description,
-      location: parsed.location,
-      coordinates: parsed.coordinates,
-      infoCards: parsed.infoCards,
+      placeType: parsed.placeType,
+      mainCategory: parsed.mainCategory,
+      categories: parsed.categories,
+      images: parsed.images,
+      city: parsed.city,
+      area: parsed.area,
+      state: parsed.state,
+      latitude: parsed.latitude,
+      longitude: parsed.longitude,
+      bestTimings: parsed.bestTimings,
+      closedOn: parsed.closedOn,
+      nearestMetro: parsed.nearestMetro,
+      crowdLevel: parsed.crowdLevel,
       safetyNote: parsed.safetyNote,
-      stats: {
-        likes: 0,
-        saves: 0,
-        visited: 0,
-      },
-      similarSpots: [],
-      uploader: {
-        username: uploader.username,
-        badge: uploader.badge,
-      },
-      reviews: [],
+      entryFee: parsed.entryFee,
+      likes: 0,
+      saves: 0,
+      visited: 0,
+      uploaderId: uploader.username,
+      createdAt: submittedAt,
+      updatedAt: submittedAt,
     };
 
     const auditLog: PlaceSubmissionAudit = {
