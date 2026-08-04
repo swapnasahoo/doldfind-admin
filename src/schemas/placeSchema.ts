@@ -4,29 +4,52 @@ const coordinateRegex = /^-?\d+(\.\d+)?$/;
 
 export const placeSchema = z
   .object({
-    title: z
+    placeName: z
       .string()
-      .min(3, { message: "Title must be at least 3 characters long" })
-      .max(100, { message: "Title cannot exceed 100 characters" }),
+      .min(3, { message: "Place name must be at least 3 characters long" })
+      .max(100, { message: "Place name cannot exceed 100 characters" }),
+    description: z
+      .string()
+      .min(10, { message: "Description must be at least 10 characters long" })
+      .max(5000, { message: "Description cannot exceed 5000 characters" }),
+    placeType: z.enum(["Spot", "Cafe", "Market"], {
+      message: "Place type must be Spot, Cafe, or Market",
+    }),
+    mainCategory: z
+      .string()
+      .min(1, { message: "Main category is required" })
+      .max(50, { message: "Main category cannot exceed 50 characters" }),
     categories: z
       .array(
-        z.string()
+        z
+          .string()
           .min(1, { message: "Category name cannot be empty" })
           .max(50, { message: "Category name cannot exceed 50 characters" })
       )
       .min(1, { message: "Select at least one category" })
       .max(20, { message: "Cannot select more than 20 categories" })
-      .refine((items) => new Set(items.map(i => i.trim().toLowerCase())).size === items.length, {
+      .refine((items) => new Set(items.map((i) => i.trim().toLowerCase())).size === items.length, {
         message: "Categories must be unique",
       }),
-    description: z
+    images: z
+      .array(
+        z
+          .string()
+          .min(1, { message: "Image path or URL cannot be empty" })
+      )
+      .max(10, { message: "Cannot attach more than 10 images" }),
+    city: z
       .string()
-      .min(10, { message: "Description must be at least 10 characters long" })
-      .max(5000, { message: "Description cannot exceed 5000 characters" }),
-    location: z
+      .min(1, { message: "City is required" })
+      .max(100, { message: "City cannot exceed 100 characters" }),
+    area: z
       .string()
-      .min(2, { message: "Location must be at least 2 characters long" })
-      .max(200, { message: "Location cannot exceed 200 characters" }),
+      .min(1, { message: "Area is required" })
+      .max(100, { message: "Area cannot exceed 100 characters" }),
+    state: z
+      .string()
+      .min(1, { message: "State is required" })
+      .max(100, { message: "State cannot exceed 100 characters" }),
     latitude: z
       .string()
       .max(20, { message: "Latitude string too long" })
@@ -53,24 +76,6 @@ export const placeSchema = z
         },
         { message: "Longitude must be a valid number between -180 and 180" }
       ),
-    infoCards: z
-      .array(
-        z.object({
-          label: z.string().min(1, "Label is required").max(50, "Label cannot exceed 50 characters"),
-          value: z.string().min(1, "Value is required").max(200, "Value cannot exceed 200 characters"),
-        }).strict()
-      )
-      .max(10, "Cannot add more than 10 custom cards"),
-    safetyNote: z
-      .string()
-      .min(1, { message: "Safety note is required" })
-      .max(1000, { message: "Safety note cannot exceed 1000 characters" }),
-
-    // Information Fields (Standardized)
-    mainCategory: z
-      .string()
-      .min(1, { message: "Main category is required" })
-      .max(50, { message: "Main category cannot exceed 50 characters" }),
     bestTimings: z
       .array(z.number().int().min(0).max(23))
       .min(1, { message: "Select at least one timing range" })
@@ -85,7 +90,7 @@ export const placeSchema = z
           "Friday",
           "Saturday",
           "Sunday",
-          "Never Closed"
+          "Never Closed",
         ])
       )
       .min(1, { message: "Select closed days or select 'Never Closed'" })
@@ -98,18 +103,18 @@ export const placeSchema = z
       .string()
       .min(1, { message: "Crowd level is required" })
       .max(50, { message: "Crowd level cannot exceed 50 characters" }),
-
-    // Pricing Fields (Standardized)
-    fee: z
+    safetyNote: z
       .string()
-      .max(200, { message: "Fee cannot exceed 200 characters" }),
+      .min(1, { message: "Safety note is required" })
+      .max(1000, { message: "Safety note cannot exceed 1000 characters" }),
+    entryFee: z.string().max(200, { message: "Entry fee cannot exceed 200 characters" }),
     ticketRequired: z.enum(["Yes", "No", ""]).refine((val) => val === "Yes" || val === "No", {
       message: "Select whether a ticket is required",
     }),
   })
   .strict()
   .superRefine((data, ctx) => {
-    // 1. Check categories for mutual exclusivity: "Free" and "Paid"
+    // Check categories for mutual exclusivity: "Free" and "Paid"
     const hasFree = data.categories.includes("Free");
     const hasPaid = data.categories.includes("Paid");
     if (hasFree && hasPaid) {
@@ -119,36 +124,4 @@ export const placeSchema = z
         path: ["categories"],
       });
     }
-
-    // 2. Check manual info cards for duplicate reserved labels (case-insensitive)
-    const reservedLabels = [
-      "main category",
-      "best timings",
-      "closed on",
-      "nearest metro",
-      "crowd level",
-      "safety note",
-      "fee",
-    ];
-
-    const seenLabels = new Set<string>();
-
-    data.infoCards.forEach((card, index) => {
-      const labelTrimmed = card.label.trim().toLowerCase();
-      if (reservedLabels.includes(labelTrimmed)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: `"${card.label}" is already collected in the Information or Pricing section above.`,
-          path: ["infoCards", index, "label"],
-        });
-      } else if (seenLabels.has(labelTrimmed)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: `Duplicate information card label: "${card.label}".`,
-          path: ["infoCards", index, "label"],
-        });
-      } else {
-        seenLabels.add(labelTrimmed);
-      }
-    });
   });
