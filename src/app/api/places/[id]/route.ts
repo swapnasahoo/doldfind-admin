@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { checkRateLimit, validateSafePayload } from "@/lib/security";
 import { placeSchema } from "@/schemas/placeSchema";
-import { GoogleSheetsPlaceRepository } from "@/lib/repositories/googleSheetsPlaceRepository";
+import { getPlaceRepository } from "@/lib/repositories/getPlaceRepository";
 import { parseIncomingPayload } from "@/lib/parser";
 import { Logger } from "@/lib/logger";
 import { AuditLogger } from "@/lib/logger/auditLogger";
@@ -81,7 +81,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return jsonError("SECURITY_VIOLATION", "Payload contains forbidden or malicious content.", 400);
     }
 
-    // 5. Zod schema validation (expecting PlaceFormValues style update payload)
+    // 5. Zod schema validation
     const parseResult = placeSchema.safeParse(body);
     if (!parseResult.success) {
       AuditLogger.log({
@@ -99,27 +99,35 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     // 6. Normalize the update payload
     const parsed = parseIncomingPayload(parseResult.data);
 
-    const repository = new GoogleSheetsPlaceRepository();
+    const repository = getPlaceRepository();
 
     const updatedDetails: PlaceDetails = {
       id,
-      title: parsed.title,
-      categories: parsed.categories,
+      placeName: parsed.placeName,
       description: parsed.description,
-      location: parsed.location,
-      coordinates: parsed.coordinates,
-      infoCards: parsed.infoCards,
+      placeType: parsed.placeType,
+      mainCategory: parsed.mainCategory,
+      categories: parsed.categories,
+      city: parsed.city,
+      area: parsed.area,
+      state: parsed.state,
+      latitude: parsed.latitude,
+      longitude: parsed.longitude,
+      bestTimings: parsed.bestTimings,
+      closedOn: parsed.closedOn,
+      nearestMetro: parsed.nearestMetro,
+      crowdLevel: parsed.crowdLevel,
       safetyNote: parsed.safetyNote,
-      stats: { likes: 0, saves: 0, visited: 0 },
-      similarSpots: [],
-      uploader: {
-        username: username,
-        badge: badge,
-      },
-      reviews: [],
+      entryFee: parsed.entryFee,
+      likes: typeof body.likes === "number" ? body.likes : 0,
+      saves: typeof body.saves === "number" ? body.saves : 0,
+      visited: typeof body.visited === "number" ? body.visited : 0,
+      uploaderId: username,
+      createdAt: body.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
-    // 7. Persist update in Google Sheets
+    // 7. Persist update in repository
     await repository.update(id, updatedDetails);
 
     AuditLogger.log({
@@ -174,7 +182,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   }
 
   try {
-    const repository = new GoogleSheetsPlaceRepository();
+    const repository = getPlaceRepository();
     await repository.delete(id);
 
     AuditLogger.log({
@@ -193,7 +201,6 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-// Fallback handlers to reject unsupported methods
 export async function GET() { return jsonError("METHOD_NOT_ALLOWED", "Method not allowed.", 405); }
 export async function POST() { return jsonError("METHOD_NOT_ALLOWED", "Method not allowed.", 405); }
 export async function PATCH() { return jsonError("METHOD_NOT_ALLOWED", "Method not allowed.", 405); }
