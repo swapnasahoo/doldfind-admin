@@ -5,18 +5,21 @@ import { Control, UseFormRegister, FieldErrors, Controller } from "react-hook-fo
 import {
   Clock,
   Calendar,
-  Train,
   Users2,
   Layers,
   AlertCircle,
   Check,
   Search,
   ChevronDown,
+  MapPin,
+  Building2,
+  Landmark,
+  Compass,
 } from "lucide-react";
 
 import { Input } from "./ui/Input";
 import { Textarea } from "./ui/Textarea";
-import { PlaceFormValues } from "@/types/place";
+import { PlaceFormValues, PlaceType } from "@/types/place";
 import { mergeTimeSlots, getContinuousDurations } from "@/utils/parser";
 
 interface QuickInfoSectionProps {
@@ -42,7 +45,11 @@ const CATEGORY_PRESETS = [
   "Garden",
   "Monument",
   "Museum",
+  "Market",
+  "Street Food",
 ];
+
+const PLACE_TYPES: PlaceType[] = ["Spot", "Cafe", "Market"];
 
 // Time slots definitions
 const TIME_SLOTS = [
@@ -120,90 +127,155 @@ export const QuickInfoSection: React.FC<QuickInfoSectionProps> = ({
       <div className="flex flex-col gap-1 border-b border-slate-850 pb-3">
         <h3 className="text-sm font-bold uppercase tracking-wider text-slate-350 flex items-center gap-2">
           <Layers className="w-4 h-4 text-violet-500" />
-          Information (Required)
+          Standard Information Cards & Attributes
         </h3>
         <p className="text-xs text-slate-500">
-          Standard place information. These fields are mandatory and will be converted automatically into normalized Information Cards.
+          Provide standardized place details. All required parameters adhere strictly to the DoldFind place schema.
         </p>
       </div>
 
       {/* Grid Layout */}
       <div className="flex flex-col gap-6">
         
-        {/* 1. Main Category Dropdown */}
-        <div ref={catDropdownRef} className="relative flex flex-col gap-1.5">
-          <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 select-none flex items-center gap-1.5">
-            Main Category
-          </label>
-          <Controller
-            control={control}
-            name="mainCategory"
-            render={({ field }) => (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setIsCatDropdownOpen(!isCatDropdownOpen)}
-                  className={`w-full bg-slate-900/60 border ${
-                    errors.mainCategory
-                      ? "border-red-500/80 focus:ring-red-500/20"
-                      : "border-slate-800 focus:border-violet-500 focus:ring-violet-500/20"
-                  } rounded-lg px-4 py-2.5 text-sm text-slate-100 flex items-center justify-between transition-all duration-200 outline-none focus:ring-4 text-left`}
-                >
-                  <span className={field.value ? "text-slate-100" : "text-slate-500"}>
-                    {field.value || "Select a main category..."}
-                  </span>
-                  <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${isCatDropdownOpen ? "transform rotate-180" : ""}`} />
-                </button>
-
-                {isCatDropdownOpen && (
-                  <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-slate-900/95 backdrop-blur-xl border border-slate-800 rounded-lg shadow-2xl z-50 max-h-56 overflow-y-auto p-1.5 animate-slideDown scrollbar-thin">
-                    <div className="flex items-center gap-1.5 bg-slate-950/60 border border-slate-800 px-2.5 py-1.5 rounded-md mb-1.5">
-                      <Search className="w-4 h-4 text-slate-500" />
-                      <input
-                        type="text"
-                        placeholder="Search categories..."
-                        value={catSearch}
-                        onChange={(e) => setCatSearch(e.target.value)}
-                        className="bg-transparent border-none outline-none text-xs text-slate-200 w-full focus:ring-0 p-0"
-                      />
-                    </div>
-
-                    {filteredCategories.length > 0 ? (
-                      filteredCategories.map((cat) => (
+        {/* Place Type & Main Category Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {/* Place Type Selector */}
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 select-none flex items-center gap-1.5">
+              <Compass className="w-3.5 h-3.5 text-violet-400" />
+              Place Type (Required)
+            </label>
+            <Controller
+              control={control}
+              name="placeType"
+              render={({ field }) => (
+                <div className="flex flex-col gap-2">
+                  <div className="flex border border-slate-800 rounded-lg p-0.5 bg-slate-950/40">
+                    {PLACE_TYPES.map((type) => {
+                      const isSelected = field.value === type;
+                      return (
                         <button
-                          key={cat}
+                          key={type}
                           type="button"
-                          onClick={() => {
-                            field.onChange(cat);
-                            setIsCatDropdownOpen(false);
-                            setCatSearch("");
-                          }}
-                          className="w-full flex items-center justify-between text-left px-3 py-2 text-xs text-slate-350 hover:text-white hover:bg-slate-800/60 rounded-md transition-all group"
+                          onClick={() => field.onChange(type)}
+                          className={`flex-1 text-center py-2.5 px-3 text-xs font-bold rounded-md transition-all duration-200 ${
+                            isSelected
+                              ? "bg-violet-600 text-white shadow-[0_0_12px_rgba(124,58,237,0.3)]"
+                              : "text-slate-400 hover:text-slate-200 hover:bg-slate-900/30"
+                          }`}
                         >
-                          <span>{cat}</span>
-                          {field.value === cat && (
-                            <Check className="w-3.5 h-3.5 text-violet-500" />
-                          )}
+                          {type}
                         </button>
-                      ))
-                    ) : (
-                      <div className="px-3 py-4 text-center text-xs text-slate-500 select-none">
-                        No presets found.
-                      </div>
-                    )}
+                      );
+                    })}
                   </div>
-                )}
-              </>
+                  {errors.placeType && (
+                    <span className="text-xs font-medium text-red-400 animate-fadeIn">
+                      {errors.placeType.message}
+                    </span>
+                  )}
+                </div>
+              )}
+            />
+          </div>
+
+          {/* Main Category Dropdown */}
+          <div ref={catDropdownRef} className="relative flex flex-col gap-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 select-none flex items-center gap-1.5">
+              Main Category
+            </label>
+            <Controller
+              control={control}
+              name="mainCategory"
+              render={({ field }) => (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setIsCatDropdownOpen(!isCatDropdownOpen)}
+                    className={`w-full bg-slate-900/60 border ${
+                      errors.mainCategory
+                        ? "border-red-500/80 focus:ring-red-500/20"
+                        : "border-slate-800 focus:border-violet-500 focus:ring-violet-500/20"
+                    } rounded-lg px-4 py-2.5 text-sm text-slate-100 flex items-center justify-between transition-all duration-200 outline-none focus:ring-4 text-left`}
+                  >
+                    <span className={field.value ? "text-slate-100" : "text-slate-500"}>
+                      {field.value || "Select a main category..."}
+                    </span>
+                    <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${isCatDropdownOpen ? "transform rotate-180" : ""}`} />
+                  </button>
+
+                  {isCatDropdownOpen && (
+                    <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-slate-900/95 backdrop-blur-xl border border-slate-800 rounded-lg shadow-2xl z-50 max-h-56 overflow-y-auto p-1.5 animate-slideDown scrollbar-thin">
+                      <div className="flex items-center gap-1.5 bg-slate-950/60 border border-slate-800 px-2.5 py-1.5 rounded-md mb-1.5">
+                        <Search className="w-4 h-4 text-slate-500" />
+                        <input
+                          type="text"
+                          placeholder="Search categories..."
+                          value={catSearch}
+                          onChange={(e) => setCatSearch(e.target.value)}
+                          className="bg-transparent border-none outline-none text-xs text-slate-200 w-full focus:ring-0 p-0"
+                        />
+                      </div>
+
+                      {filteredCategories.length > 0 ? (
+                        filteredCategories.map((cat) => (
+                          <button
+                            key={cat}
+                            type="button"
+                            onClick={() => {
+                              field.onChange(cat);
+                              setIsCatDropdownOpen(false);
+                              setCatSearch("");
+                            }}
+                            className="w-full flex items-center justify-between text-left px-3 py-2 text-xs text-slate-350 hover:text-white hover:bg-slate-800/60 rounded-md transition-all group"
+                          >
+                            <span>{cat}</span>
+                            {field.value === cat && (
+                              <Check className="w-3.5 h-3.5 text-violet-500" />
+                            )}
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-3 py-4 text-center text-xs text-slate-500 select-none">
+                          No presets found.
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+            />
+            {errors.mainCategory && (
+              <span className="text-xs font-medium text-red-400 animate-fadeIn">
+                {errors.mainCategory.message}
+              </span>
             )}
-          />
-          {errors.mainCategory && (
-            <span className="text-xs font-medium text-red-400 animate-fadeIn">
-              {errors.mainCategory.message}
-            </span>
-          )}
+          </div>
         </div>
 
-        {/* 2. Best Timings Selector (Chips Grid) */}
+        {/* Location Breakdown: City, Area, State */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Input
+            label="City"
+            placeholder="e.g. Bhubaneswar, Los Angeles"
+            error={errors.city?.message}
+            {...register("city")}
+          />
+          <Input
+            label="Area"
+            placeholder="e.g. Saheed Nagar, Downtown"
+            error={errors.area?.message}
+            {...register("area")}
+          />
+          <Input
+            label="State"
+            placeholder="e.g. Odisha, California"
+            error={errors.state?.message}
+            {...register("state")}
+          />
+        </div>
+
+        {/* Best Timings Selector (Chips Grid) */}
         <div className="flex flex-col gap-2">
           <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 select-none flex items-center gap-1.5">
             <Clock className="w-3.5 h-3.5 text-violet-400" />
@@ -225,7 +297,6 @@ export const QuickInfoSection: React.FC<QuickInfoSectionProps> = ({
                 field.onChange(updated);
               };
 
-              // Real-time helper Calculations
               const merged = mergeTimeSlots(selected);
               const continuousBlocks = getContinuousDurations(selected);
               const hasOver4Hours = continuousBlocks.some((b) => b > 4);
@@ -260,7 +331,7 @@ export const QuickInfoSection: React.FC<QuickInfoSectionProps> = ({
                         <span className="font-bold text-slate-300">Selected Slots:</span> {selected.length} hour{selected.length > 1 ? "s" : ""} selected.
                       </div>
                       <div className="text-xs text-violet-400 leading-relaxed font-semibold">
-                        <span className="text-slate-400 font-normal">These will be stored as:</span> &quot;{merged}&quot;
+                        <span className="text-slate-400 font-normal">Stored format:</span> &quot;{merged}&quot;
                       </div>
 
                       {/* Over 4 Hours Warning */}
@@ -286,7 +357,7 @@ export const QuickInfoSection: React.FC<QuickInfoSectionProps> = ({
           />
         </div>
 
-        {/* 3. Closed On Selector */}
+        {/* Closed On Selector */}
         <div className="flex flex-col gap-2">
           <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 select-none flex items-center gap-1.5">
             <Calendar className="w-3.5 h-3.5 text-violet-400" />
@@ -304,7 +375,6 @@ export const QuickInfoSection: React.FC<QuickInfoSectionProps> = ({
                 if (day === "Never Closed") {
                   updated = ["Never Closed"];
                 } else {
-                  // If Never Closed was selected previously, clear it
                   const baseList = selected.filter((d) => d !== "Never Closed");
                   if (baseList.includes(day)) {
                     updated = baseList.filter((d) => d !== day);
@@ -336,7 +406,6 @@ export const QuickInfoSection: React.FC<QuickInfoSectionProps> = ({
                       );
                     })}
 
-                    {/* Never Closed Button */}
                     <button
                       type="button"
                       onClick={() => handleToggleDay("Never Closed")}
@@ -361,10 +430,8 @@ export const QuickInfoSection: React.FC<QuickInfoSectionProps> = ({
           />
         </div>
 
-        {/* 4. Nearest Metro & 5. Crowd Level Container */}
+        {/* Nearest Metro & Crowd Level */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          
-          {/* Nearest Metro */}
           <div className="flex flex-col gap-1.5">
             <Input
               label="Nearest Metro"
@@ -374,7 +441,6 @@ export const QuickInfoSection: React.FC<QuickInfoSectionProps> = ({
             />
           </div>
 
-          {/* Crowd Level */}
           <div className="flex flex-col gap-2">
             <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 select-none flex items-center gap-1.5">
               <Users2 className="w-3.5 h-3.5 text-violet-400" />
@@ -415,7 +481,7 @@ export const QuickInfoSection: React.FC<QuickInfoSectionProps> = ({
           </div>
         </div>
 
-        {/* 6. Safety Note Textarea */}
+        {/* Safety Note Textarea */}
         <div className="flex flex-col gap-1.5">
           <Textarea
             label="Safety Note"
@@ -426,29 +492,27 @@ export const QuickInfoSection: React.FC<QuickInfoSectionProps> = ({
           />
         </div>
 
-        {/* Pricing Sub-Section */}
+        {/* Entry Fee & Ticket Required */}
         <div className="flex flex-col gap-4 border-t border-slate-850 pt-4 mt-2">
           <div className="flex flex-col gap-0.5">
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-350">
-              Pricing
+              Entry Fee & Ticketing
             </h4>
             <p className="text-[10px] text-slate-500">
-              Provide payment details. If free, leave the fee blank and select ticket requirements.
+              Specify entry cost details or select ticket options.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* Fee Input */}
             <div className="flex flex-col gap-1.5">
               <Input
-                label="Fee (Optional)"
+                label="Entry Fee (Optional)"
                 placeholder="e.g. ₹50, ₹100 per person, Free for Students"
-                error={errors.fee?.message}
-                {...register("fee")}
+                error={errors.entryFee?.message}
+                {...register("entryFee")}
               />
             </div>
 
-            {/* Ticket Required Toggle */}
             <div className="flex flex-col gap-2">
               <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 select-none">
                 Ticket Required
