@@ -20,6 +20,8 @@ doldfind-admin/
 │   │       │   │   └── route.ts     # POST logout endpoint (clears cookie)
 │   │       │   └── session/
 │   │       │       └── route.ts     # GET session status and auto-renewal
+│   │       ├── upload/
+│   │       │   └── route.ts         # POST image file upload endpoint (Appwrite Cloud Bucket)
 │   │       └── places/
 │   │           └── submit/
 │   │               └── route.ts     # POST place entry submit handler (protected, WAF audited)
@@ -34,11 +36,14 @@ doldfind-admin/
 │   │   ├── parser/
 │   │   │   └── index.ts             # Independent pure parser utility
 │   │   ├── repositories/
-│   │   │   ├── placeRepository.interface.ts     # Repository abstract interface
-│   │   │   └── googleSheetsPlaceRepository.ts   # Google Sheets implementation
+│   │   │   ├── placeRepository.interface.ts # Repository abstract interface
+│   │   │   ├── appwritePlaceRepository.ts   # Appwrite Cloud integration (node-appwrite v27)
+│   │   │   ├── jsonPlaceRepository.ts       # Local JSON persistence implementation
+│   │   │   └── getPlaceRepository.ts        # Repository factory (Appwrite Cloud with JSON fallback)
 │   │   ├── security/
 │   │   │   └── index.ts             # Rate limits, lockout registry, and input WAF filters
 │   │   ├── services/
+│   │   │   ├── appwriteStorageService.ts    # Appwrite Cloud Storage Bucket file upload manager
 │   │   │   ├── authService.ts       # Password hashing & lockout business logic
 │   │   │   └── placeSubmissionService.ts # Orchestrates data submission
 │   │   └── utils/
@@ -55,90 +60,53 @@ All secrets are loaded dynamically from environment configurations via the confi
 | Variable Name | Type | Description |
 | :--- | :--- | :--- |
 | `JWT_SESSION_SECRET` | `string` | Cryptographic secret key used to sign session cookies. |
-| `GOOGLE_PROJECT_ID` | `string` | Google Cloud project ID. |
-| `GOOGLE_CLIENT_EMAIL` | `string` | Google service account email. |
-| `GOOGLE_PRIVATE_KEY` | `string` | RSA private key for the Google service account. |
-| `GOOGLE_SHEET_ID` | `string` | Target Google Spreadsheet ID for entries queues. |
+| `APPWRITE_ENDPOINT` | `string` | Appwrite API endpoint (default: `https://cloud.appwrite.io/v1`). |
+| `APPWRITE_PROJECT_ID` | `string` | Appwrite Cloud Project ID. |
+| `APPWRITE_API_KEY` | `string` | Appwrite Cloud API Key with database & storage scopes (`documents.read`, `documents.write`, `files.read`, `files.write`). |
+| `APPWRITE_DATABASE_ID` | `string` | Database ID in Appwrite Cloud (default: `doldfind-db`). |
+| `APPWRITE_COLLECTION_ID` | `string` | Collection ID in Appwrite Cloud (default: `places`). |
+| `APPWRITE_BUCKET_ID` | `string` | Appwrite Storage Bucket ID for place images (default: `place-images`). |
 | `ADMIN_SWAPNA_USERNAME` | `string` | Username for founder Swapna. |
 | `ADMIN_SWAPNA_PASSWORD_HASH` | `string` | Argon2id password hash for founder Swapna. |
 | `ADMIN_SWAPNA_BADGE` | `string` | Badge designation (e.g. `"Founder"`). |
-| `ADMIN_RIHAN_USERNAME` | `string` | Username for founder Rihan. |
-| `ADMIN_RIHAN_PASSWORD_HASH` | `string` | Argon2id password hash for founder Rihan. |
-| `ADMIN_RIHAN_BADGE` | `string` | Badge designation. |
-| `ADMIN_ISHAN_USERNAME` | `string` | Username for founder Ishan. |
-| `ADMIN_ISHAN_PASSWORD_HASH` | `string` | Argon2id password hash for founder Ishan. |
-| `ADMIN_ISHAN_BADGE` | `string` | Badge designation. |
 
 ---
 
-## 3. Authentication & Session Flow
+## 3. Appwrite Cloud Storage Integration Details
 
-1. **Argon2id Passwords**: Password hashing uses Rust-compiled bindings (`@node-rs/argon2`). Verification utilizes generic errors and a **dummy hash check** for unknown users to enforce constant-time responses, preventing timing attacks and username enumeration.
-2. **Account Lockouts**: Five consecutive failed attempts on any username locks out that login profile for 15 minutes.
-3. **Session Cookies**:
-   - Encrypted with `jose` using HS256 algorithm.
-   - Stored in cookies with `HttpOnly`, `Secure` (in production), `SameSite=Strict` attributes.
-   - Lifetime: 1 hour.
-   - Automatic Renewal: If the user makes requests within the last 15 minutes of session lifetime, the server automatically updates and extends the cookie.
+The project integrates with **Appwrite Cloud** using the official Node Server SDK (`node-appwrite` v27):
 
----
+- **Image File Uploads** (`AppwriteStorageService` & `/api/upload`):
+  - Admin users drag & drop image files in the dashboard.
+  - Image files are processed via `AppwriteStorageService.uploadImage()` using `Storage.createFile()`.
+  - Appwrite returns the generated public view URL (`${endpoint}/storage/buckets/${bucketId}/files/${fileId}/view?project=${projectId}`).
+  - The returned URL string is appended into the `images` array of the `PlaceDetails` record.
+- **Repository Factory** (`getPlaceRepository()`): Dynamically detects if `APPWRITE_PROJECT_ID` and `APPWRITE_API_KEY` are provided. When configured, it uses `AppwritePlaceRepository`. If unconfigured, it seamlessly falls back to `JsonPlaceRepository` and local file uploads.
 
-## 4. Request Lifecycle & Validation Flow
+### Collection Attribute Mapping
 
-Every place submission executes through the following filters:
-
-```
-Client request (Payload)
-  ↓
-Edge Middleware (Token decrypted & validated; yields 401 JSON if missing/invalid)
-  ↓
-Rate Limiter (Limits IP requests per window; yields 429 JSON if exceeded)
-  ↓
-Payload Size Check (Limits payload size to 50KB to block denial of service)
-  ↓
-WAF Sanitization Filter (Recursively checks strings; rejects HTML, scripts, XSS, malformed unicode)
-  ↓
-Zod Validation (Enforces type checking, strict Zod schemas; yields 400 JSON on error)
-  ↓
-Parser Utility (Trims, collapses spaces, dedups categories, standardizes infoCards)
-  ↓
-PlaceSubmissionService (Generates ID, timestamp, session uploader, empty defaults)
-  ↓
-GoogleSheetsPlaceRepository (Appends entry and audit logs to sheet)
-  ↓
-Success Response returned (201 JSON)
-```
-
----
-
-## 5. Parser Details
-
-The parser module in [parser/index.ts](file:///C:/Users/ishan/.gemini/antigravity/scratch/doldfind-admin/src/lib/parser/index.ts) is pure and decoupled from Sheets:
-- Trims whitespace and collapses repeated middle spaces.
-- Normalizes unicode using NFC and newlines to `\n`.
-- De-duplicates place categories, enforcing that `"Free"` and `"Paid"` are mutually exclusive (prioritizing `"Free"` if both are submitted).
-- Prepends the 7 standardized information cards (Main Category, Best Timings, Closed On, Metro, Crowd, Safety, Fee).
-- Filters out manual cards whose labels match these 7 reserved fields.
-
----
-
-## 6. Repository Pattern
-
-The API route handler interacts with data only through `PlaceSubmissionService` and `PlaceRepository` interfaces:
-
-```
-Route Handler -> PlaceSubmissionService -> PlaceRepository Interface -> GoogleSheetsPlaceRepository
-```
-
-This ensures that the Google Sheets persistence layer can be swapped out for Supabase, PostgreSQL, or MongoDB in the future by writing a new repository class conforming to `PlaceRepository` without touching any route handler code.
-
----
-
-## 7. Google Sheets Format
-
-The Google Sheets repository formats information cards into readable semicolons-delimited strings rather than storing raw JSON:
-
-```
-Main Category: Waterfall; Best Timings: 5 AM - 7 AM; Closed On: Never Closed; Nearest Metro: Baner Metro; Crowd Level: Low; Safety Note: Watch out for slippery rocks; Fee: FREE - NO TICKET REQUIRED;
-```
-It appends exactly one row containing: Submission ID, Timestamp, Submitted By, Badge, Place ID, Title, Categories, Description, Location, Latitude, Longitude, Information Cards, Uploader Username, Uploader Badge, Safety Note.
+| Attribute Key | Type | Size / Options |
+| :--- | :--- | :--- |
+| `placeName` | String | 100 |
+| `description` | String | 5000 |
+| `placeType` | Enum / String | `"Spot"`, `"Cafe"`, `"Market"` |
+| `mainCategory` | String | 50 |
+| `categories` | String Array | Array of strings |
+| `images` | String Array | Array of Appwrite Cloud Storage view URLs |
+| `city` | String | 100 |
+| `area` | String | 100 |
+| `state` | String | 100 |
+| `latitude` | String | 20 |
+| `longitude` | String | 20 |
+| `bestTimings` | String | 200 |
+| `closedOn` | String | 100 |
+| `nearestMetro` | String | 100 |
+| `crowdLevel` | String | 50 |
+| `safetyNote` | String | 1000 |
+| `entryFee` | String | 200 |
+| `likes` | Integer | Default: 0 |
+| `saves` | Integer | Default: 0 |
+| `visited` | Integer | Default: 0 |
+| `uploaderId` | String | 100 |
+| `createdAt` | String / Datetime | ISO 8601 string |
+| `updatedAt` | String / Datetime | ISO 8601 string |
