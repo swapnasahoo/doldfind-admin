@@ -8,23 +8,24 @@ import {
   MapPin,
   LogOut,
   Search,
-  SlidersHorizontal,
   Trash2,
   Edit3,
   Plus,
   ChevronLeft,
   ChevronRight,
-  Info,
-  Calendar,
   Clock,
   Coins,
   Users,
   AlertTriangle,
   X,
   RefreshCw,
-  CheckCircle2,
   Tag,
   User,
+  Heart,
+  Bookmark,
+  Eye,
+  Calendar,
+  Layers,
 } from "lucide-react";
 import { PlaceDetails } from "@/types/place";
 
@@ -45,13 +46,13 @@ export default function PlacesManagement() {
   // Search & Filter State
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [filterPlaceType, setFilterPlaceType] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
   const [filterMainCategory, setFilterMainCategory] = useState("");
+  const [filterCity, setFilterCity] = useState("");
+  const [filterState, setFilterState] = useState("");
   const [filterUploader, setFilterUploader] = useState("");
-  const [filterPricing, setFilterPricing] = useState(""); // "", "free", "paid"
-  const [filterCrowdLevel, setFilterCrowdLevel] = useState("");
-  const [filterClosedDay, setFilterClosedDay] = useState("");
-  const [sortBy, setSortBy] = useState("newest"); // "newest", "oldest", "a-z", "z-a", "recently_edited"
+  const [sortBy, setSortBy] = useState("newest"); // "newest", "oldest", "a-z", "z-a"
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -118,7 +119,7 @@ export default function PlacesManagement() {
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearch(search);
-      setCurrentPage(1); // Reset to page 1 on new search
+      setCurrentPage(1);
     }, 300);
     return () => clearTimeout(handler);
   }, [search]);
@@ -158,8 +159,7 @@ export default function PlacesManagement() {
       });
       const result = await res.json();
       if (res.ok && result.success) {
-        showToast("Place deleted permanently from Google Sheets.", "success");
-        // Optimistic update
+        showToast("Place deleted permanently from database.", "success");
         setPlaces((prev) => prev.filter((p) => p.id !== targetId));
       } else {
         showToast(result.error?.message || "Failed to delete place.", "error");
@@ -171,31 +171,41 @@ export default function PlacesManagement() {
     }
   };
 
-  // Helper to extract specific info card values
-  const getCardVal = (place: PlaceDetails, label: string) => {
-    return place.infoCards.find((c) => c.label.toLowerCase() === label.toLowerCase())?.value || "";
-  };
-
-  // Unique list of categories and uploaders for filter selections
+  // Filter options derived from data
   const uniqueCategories = useMemo(() => {
     const cats = new Set<string>();
-    places.forEach((p) => p.categories.forEach((c) => cats.add(c)));
+    places.forEach((p) => (p.categories || []).forEach((c) => cats.add(c)));
     return Array.from(cats).sort();
   }, [places]);
 
   const uniqueMainCategories = useMemo(() => {
     const cats = new Set<string>();
     places.forEach((p) => {
-      const val = getCardVal(p, "main category");
-      if (val) cats.add(val);
+      if (p.mainCategory) cats.add(p.mainCategory);
     });
     return Array.from(cats).sort();
+  }, [places]);
+
+  const uniqueCities = useMemo(() => {
+    const cities = new Set<string>();
+    places.forEach((p) => {
+      if (p.city) cities.add(p.city);
+    });
+    return Array.from(cities).sort();
+  }, [places]);
+
+  const uniqueStates = useMemo(() => {
+    const states = new Set<string>();
+    places.forEach((p) => {
+      if (p.state) states.add(p.state);
+    });
+    return Array.from(states).sort();
   }, [places]);
 
   const uniqueUploaders = useMemo(() => {
     const uploaders = new Set<string>();
     places.forEach((p) => {
-      if (p.uploader?.username) uploaders.add(p.uploader.username);
+      if (p.uploaderId) uploaders.add(p.uploaderId);
     });
     return Array.from(uploaders).sort();
   }, [places]);
@@ -204,78 +214,65 @@ export default function PlacesManagement() {
   const filteredPlaces = useMemo(() => {
     return places
       .filter((place) => {
-        // Search query
         if (debouncedSearch.trim() !== "") {
           const q = debouncedSearch.toLowerCase().trim();
-          const matchTitle = place.title.toLowerCase().includes(q);
-          const matchLocation = place.location.toLowerCase().includes(q);
-          const matchCategories = place.categories.some((c) => c.toLowerCase().includes(q));
-          const matchMainCat = getCardVal(place, "main category").toLowerCase().includes(q);
-          const matchUploader = place.uploader.username.toLowerCase().includes(q);
-          const matchId = place.id.toLowerCase().includes(q);
+          const matchName = (place.placeName || "").toLowerCase().includes(q);
+          const matchCity = (place.city || "").toLowerCase().includes(q);
+          const matchArea = (place.area || "").toLowerCase().includes(q);
+          const matchState = (place.state || "").toLowerCase().includes(q);
+          const matchCategories = (place.categories || []).some((c) => c.toLowerCase().includes(q));
+          const matchMainCat = (place.mainCategory || "").toLowerCase().includes(q);
+          const matchUploader = (place.uploaderId || "").toLowerCase().includes(q);
+          const matchId = (place.id || "").toLowerCase().includes(q);
 
-          if (!matchTitle && !matchLocation && !matchCategories && !matchMainCat && !matchUploader && !matchId) {
+          if (!matchName && !matchCity && !matchArea && !matchState && !matchCategories && !matchMainCat && !matchUploader && !matchId) {
             return false;
           }
         }
 
-        // Filters
-        if (filterCategory && !place.categories.some((c) => c.toLowerCase() === filterCategory.toLowerCase())) {
+        if (filterPlaceType && (place.placeType || "").toLowerCase() !== filterPlaceType.toLowerCase()) {
           return false;
         }
-        if (filterMainCategory && getCardVal(place, "main category").toLowerCase() !== filterMainCategory.toLowerCase()) {
+        if (filterCategory && !(place.categories || []).some((c) => c.toLowerCase() === filterCategory.toLowerCase())) {
           return false;
         }
-        if (filterUploader && place.uploader.username.toLowerCase() !== filterUploader.toLowerCase()) {
+        if (filterMainCategory && (place.mainCategory || "").toLowerCase() !== filterMainCategory.toLowerCase()) {
           return false;
         }
-        if (filterPricing) {
-          const isFree = place.categories.includes("Free") || getCardVal(place, "fee").toUpperCase().includes("FREE");
-          if (filterPricing === "free" && !isFree) return false;
-          if (filterPricing === "paid" && isFree) return false;
-        }
-        if (filterCrowdLevel && getCardVal(place, "crowd level").toLowerCase() !== filterCrowdLevel.toLowerCase()) {
+        if (filterCity && (place.city || "").toLowerCase() !== filterCity.toLowerCase()) {
           return false;
         }
-        if (filterClosedDay) {
-          const closedOn = getCardVal(place, "closed on").toLowerCase();
-          if (filterClosedDay === "Never Closed") {
-            if (closedOn !== "never closed") return false;
-          } else {
-            if (closedOn === "never closed" || !closedOn.includes(filterClosedDay.toLowerCase())) return false;
-          }
+        if (filterState && (place.state || "").toLowerCase() !== filterState.toLowerCase()) {
+          return false;
+        }
+        if (filterUploader && (place.uploaderId || "").toLowerCase() !== filterUploader.toLowerCase()) {
+          return false;
         }
 
         return true;
       })
       .sort((a, b) => {
         if (sortBy === "a-z") {
-          return a.title.localeCompare(b.title);
+          return (a.placeName || "").localeCompare(b.placeName || "");
         }
         if (sortBy === "z-a") {
-          return b.title.localeCompare(a.title);
+          return (b.placeName || "").localeCompare(a.placeName || "");
         }
-        return 0; // keep natural order for reverse modifications below
+        if (sortBy === "oldest") {
+          return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+        }
+        // Default newest
+        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
       });
-  }, [places, debouncedSearch, filterCategory, filterMainCategory, filterUploader, filterPricing, filterCrowdLevel, filterClosedDay, sortBy]);
+  }, [places, debouncedSearch, filterPlaceType, filterCategory, filterMainCategory, filterCity, filterState, filterUploader, sortBy]);
 
-  // Adjust order for newest/natural sorting
-  const sortedAndFilteredPlaces = useMemo(() => {
-    if (sortBy === "newest" || sortBy === "recently_edited") {
-      return [...filteredPlaces].reverse();
-    }
-    return filteredPlaces;
-  }, [filteredPlaces, sortBy]);
-
-  // Paginated View
   const paginatedPlaces = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
-    return sortedAndFilteredPlaces.slice(start, start + pageSize);
-  }, [sortedAndFilteredPlaces, currentPage]);
+    return filteredPlaces.slice(start, start + pageSize);
+  }, [filteredPlaces, currentPage]);
 
-  const totalPages = Math.ceil(sortedAndFilteredPlaces.length / pageSize);
+  const totalPages = Math.ceil(filteredPlaces.length / pageSize);
 
-  // 1. Initial Checking Session Loading View
   if (checkingSession) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center relative">
@@ -293,7 +290,6 @@ export default function PlacesManagement() {
     );
   }
 
-  // 2. Redirect to authenticate on Home page if not logged in
   if (!session) {
     return (
       <main className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
@@ -313,9 +309,21 @@ export default function PlacesManagement() {
 
   return (
     <main className="relative min-h-screen flex flex-col justify-between overflow-hidden">
-      {/* Decorative Background Auras */}
+      {/* Background Auras */}
       <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-900/10 blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full bg-violet-900/10 blur-[150px] pointer-events-none" />
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`fixed top-5 right-5 z-50 px-4 py-3 rounded-xl border backdrop-blur-xl shadow-2xl flex items-center gap-2.5 text-xs font-bold animate-slideDown ${
+          toast.type === "success"
+            ? "bg-emerald-950/80 border-emerald-800 text-emerald-300"
+            : "bg-red-950/80 border-red-800 text-red-300"
+        }`}>
+          {toast.type === "success" ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <AlertTriangle className="w-4 h-4 text-red-400" />}
+          <span>{toast.message}</span>
+        </div>
+      )}
 
       {/* Header Navigation */}
       <header className="border-b border-slate-900 bg-slate-950/60 backdrop-blur-xl sticky top-0 z-40">
@@ -335,7 +343,6 @@ export default function PlacesManagement() {
               </div>
             </Link>
 
-            {/* Main Tabs */}
             <nav className="hidden md:flex items-center gap-4 text-xs font-bold uppercase tracking-wider">
               <Link href="/" className="text-slate-400 hover:text-slate-200 transition px-3 py-1">
                 Contribute Spot
@@ -346,7 +353,6 @@ export default function PlacesManagement() {
             </nav>
           </div>
 
-          {/* Active Profile Info */}
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2.5 select-none">
               <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-violet-500/20 to-indigo-500/20 border border-violet-850 flex items-center justify-center font-bold text-xs text-violet-300 uppercase">
@@ -370,20 +376,9 @@ export default function PlacesManagement() {
             </button>
           </div>
         </div>
-        {/* Mobile Navigation sub-bar */}
-        <div className="md:hidden border-t border-slate-900 bg-slate-950/30">
-          <div className="max-w-7xl mx-auto px-4 flex items-center justify-center gap-6 h-10 text-[10px] font-bold uppercase tracking-wider select-none">
-            <Link href="/" className="text-slate-400 hover:text-slate-200 transition px-2 py-1.5">
-              Contribute Spot
-            </Link>
-            <Link href="/places" className="text-violet-400 border-b-2 border-violet-500 px-2 py-1.5 transition">
-              Manage Database
-            </Link>
-          </div>
-        </div>
       </header>
 
-      {/* Main Content Area */}
+      {/* Main Content */}
       <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-6 relative z-10">
         
         {/* Title Banner */}
@@ -391,13 +386,13 @@ export default function PlacesManagement() {
           <div className="flex flex-col gap-1">
             <span className="text-xs font-bold text-violet-400 tracking-wider uppercase flex items-center gap-1.5">
               <Tag className="w-3.5 h-3.5" />
-              Google Sheets Registry
+              Database Registry
             </span>
             <h1 className="text-2xl md:text-3xl font-extrabold text-slate-100 tracking-tight">
               Places Management
             </h1>
             <p className="text-xs text-slate-400 max-w-2xl leading-relaxed">
-              Read, update, and remove places directly stored on the configured Google Sheets queue. Always review modifications for data sanitization and accuracy.
+              Read, edit, and remove places conforming to the DoldFind schema.
             </p>
           </div>
 
@@ -410,12 +405,11 @@ export default function PlacesManagement() {
         {/* Search & Filters Box */}
         <div className="bg-slate-900/40 border border-slate-850 rounded-xl p-5 backdrop-blur-md flex flex-col gap-4">
           
-          {/* Main Search Input */}
           <div className="flex items-center gap-3 bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 focus-within:border-violet-500 focus-within:ring-1 focus-within:ring-violet-500 transition">
             <Search className="w-4 h-4 text-slate-500 flex-shrink-0" />
             <input
               type="text"
-              placeholder="Instant search by title, location, category, uploader name, or ID..."
+              placeholder="Search by place name, city, area, state, type, category, or ID..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="bg-transparent border-none outline-none text-xs text-slate-200 w-full focus:ring-0 p-0"
@@ -427,9 +421,23 @@ export default function PlacesManagement() {
             )}
           </div>
 
-          {/* Collapsible/Grid Filters */}
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
             
+            {/* Place Type */}
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Place Type</label>
+              <select
+                value={filterPlaceType}
+                onChange={(e) => { setFilterPlaceType(e.target.value); setCurrentPage(1); }}
+                className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-2 text-xs text-slate-300 focus:outline-none focus:border-violet-500 transition"
+              >
+                <option value="">All Types</option>
+                <option value="Spot">Spot</option>
+                <option value="Cafe">Cafe</option>
+                <option value="Market">Market</option>
+              </select>
+            </div>
+
             {/* Main Category */}
             <div className="flex flex-col gap-1">
               <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Main Category</label>
@@ -445,7 +453,37 @@ export default function PlacesManagement() {
               </select>
             </div>
 
-            {/* Custom Category */}
+            {/* City */}
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">City</label>
+              <select
+                value={filterCity}
+                onChange={(e) => { setFilterCity(e.target.value); setCurrentPage(1); }}
+                className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-2 text-xs text-slate-300 focus:outline-none focus:border-violet-500 transition"
+              >
+                <option value="">All Cities</option>
+                {uniqueCities.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* State */}
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">State</label>
+              <select
+                value={filterState}
+                onChange={(e) => { setFilterState(e.target.value); setCurrentPage(1); }}
+                className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-2 text-xs text-slate-300 focus:outline-none focus:border-violet-500 transition"
+              >
+                <option value="">All States</option>
+                {uniqueStates.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Category Tag */}
             <div className="flex flex-col gap-1">
               <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Category Tag</label>
               <select
@@ -457,57 +495,6 @@ export default function PlacesManagement() {
                 {uniqueCategories.map((c) => (
                   <option key={c} value={c}>{c}</option>
                 ))}
-              </select>
-            </div>
-
-            {/* Pricing */}
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Pricing Option</label>
-              <select
-                value={filterPricing}
-                onChange={(e) => { setFilterPricing(e.target.value); setCurrentPage(1); }}
-                className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-2 text-xs text-slate-300 focus:outline-none focus:border-violet-500 transition"
-              >
-                <option value="">All Prices</option>
-                <option value="free">Free Only</option>
-                <option value="paid">Paid Only</option>
-              </select>
-            </div>
-
-            {/* Crowd Level */}
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Crowd Level</label>
-              <select
-                value={filterCrowdLevel}
-                onChange={(e) => { setFilterCrowdLevel(e.target.value); setCurrentPage(1); }}
-                className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-2 text-xs text-slate-300 focus:outline-none focus:border-violet-500 transition"
-              >
-                <option value="">All Crowd Levels</option>
-                <option value="very low">Very Low</option>
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-                <option value="very high">Very High</option>
-              </select>
-            </div>
-
-            {/* Closed Day */}
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Closed On</label>
-              <select
-                value={filterClosedDay}
-                onChange={(e) => { setFilterClosedDay(e.target.value); setCurrentPage(1); }}
-                className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-2 text-xs text-slate-300 focus:outline-none focus:border-violet-500 transition"
-              >
-                <option value="">All Days</option>
-                <option value="Never Closed">Never Closed</option>
-                <option value="Monday">Monday</option>
-                <option value="Tuesday">Tuesday</option>
-                <option value="Wednesday">Wednesday</option>
-                <option value="Thursday">Thursday</option>
-                <option value="Friday">Friday</option>
-                <option value="Saturday">Saturday</option>
-                <option value="Sunday">Sunday</option>
               </select>
             </div>
 
@@ -538,23 +525,21 @@ export default function PlacesManagement() {
                 <option value="oldest">Oldest First</option>
                 <option value="a-z">A-Z (Alphabetical)</option>
                 <option value="z-a">Z-A (Alphabetical)</option>
-                <option value="recently_edited">Natural Row Order</option>
               </select>
             </div>
 
           </div>
 
-          {/* Reset Filters Option */}
-          {(filterCategory || filterMainCategory || filterUploader || filterPricing || filterCrowdLevel || filterClosedDay || search) && (
+          {(filterPlaceType || filterCategory || filterMainCategory || filterCity || filterState || filterUploader || search) && (
             <button
               onClick={() => {
                 setSearch("");
+                setFilterPlaceType("");
                 setFilterCategory("");
                 setFilterMainCategory("");
+                setFilterCity("");
+                setFilterState("");
                 setFilterUploader("");
-                setFilterPricing("");
-                setFilterCrowdLevel("");
-                setFilterClosedDay("");
                 setSortBy("newest");
               }}
               className="text-[11px] font-bold text-violet-400 hover:text-violet-300 self-end flex items-center gap-1 mt-1 transition"
@@ -566,7 +551,7 @@ export default function PlacesManagement() {
 
         </div>
 
-        {/* Loading Skeletons */}
+        {/* Loading */}
         {loading && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -580,16 +565,12 @@ export default function PlacesManagement() {
                   <div className="h-3 bg-slate-800 rounded w-full" />
                   <div className="h-3 bg-slate-800 rounded w-5/6" />
                 </div>
-                <div className="border-t border-slate-850 pt-3 mt-auto space-y-1">
-                  <div className="h-3 bg-slate-800 rounded w-1/2" />
-                  <div className="h-3 bg-slate-800 rounded w-1/3" />
-                </div>
               </div>
             ))}
           </div>
         )}
 
-        {/* Error State */}
+        {/* Error */}
         {!loading && apiError && (
           <div className="bg-red-950/20 border border-red-900/50 rounded-xl p-6 text-center flex flex-col gap-2 max-w-xl mx-auto my-10">
             <AlertTriangle className="w-10 h-10 text-red-400 mx-auto" />
@@ -604,16 +585,16 @@ export default function PlacesManagement() {
           </div>
         )}
 
-        {/* Empty State */}
-        {!loading && !apiError && sortedAndFilteredPlaces.length === 0 && (
+        {/* Empty */}
+        {!loading && !apiError && filteredPlaces.length === 0 && (
           <div className="text-center py-16 border border-dashed border-slate-850 rounded-2xl flex flex-col items-center justify-center gap-4 bg-slate-900/5 backdrop-blur-md max-w-lg mx-auto w-full my-6 select-none animate-fadeIn">
             <div className="w-14 h-14 rounded-2xl bg-slate-900 border border-slate-850 flex items-center justify-center">
               <Compass className="w-8 h-8 text-slate-600 animate-spin-slow" />
             </div>
             <div className="flex flex-col gap-1 max-w-xs">
-              <h3 className="text-sm font-bold text-slate-300">No places have been added yet</h3>
+              <h3 className="text-sm font-bold text-slate-300">No places found</h3>
               <p className="text-xs text-slate-500 leading-relaxed">
-                We couldn&apos;t find any records matching your search criteria or the database is currently empty.
+                We couldn&apos;t find any records matching your search criteria.
               </p>
             </div>
             <Link href="/" className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-xs font-bold transition">
@@ -623,121 +604,134 @@ export default function PlacesManagement() {
         )}
 
         {/* Places Cards Grid */}
-        {!loading && !apiError && sortedAndFilteredPlaces.length > 0 && (
+        {!loading && !apiError && filteredPlaces.length > 0 && (
           <div className="flex flex-col gap-6">
             <div className="text-xs text-slate-400">
-              Showing <span className="font-bold text-slate-200">{paginatedPlaces.length}</span> of <span className="font-bold text-slate-200">{sortedAndFilteredPlaces.length}</span> registered places.
+              Showing <span className="font-bold text-slate-200">{paginatedPlaces.length}</span> of <span className="font-bold text-slate-200">{filteredPlaces.length}</span> registered places.
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {paginatedPlaces.map((place) => {
-                const mainCategory = getCardVal(place, "main category");
-                const closedOn = getCardVal(place, "closed on");
-                const timings = getCardVal(place, "best timings");
-                const crowdLevel = getCardVal(place, "crowd level");
-                const fee = getCardVal(place, "fee");
-
-                return (
-                  <div
-                    key={place.id}
-                    className="bg-slate-900/30 border border-slate-850 rounded-xl p-5 md:p-6 backdrop-blur-sm flex flex-col gap-4 hover:border-slate-750/80 hover:bg-slate-900/50 hover:shadow-2xl hover:shadow-violet-950/5 group transition-all duration-300 relative overflow-hidden"
-                  >
-                    {/* Header */}
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex justify-between items-start gap-3">
-                        <h3 className="text-sm font-bold text-slate-200 group-hover:text-violet-400 transition duration-200 line-clamp-1">
-                          {place.title}
-                        </h3>
-                        
-                        {/* Inline Actions */}
-                        <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                          <button
-                            onClick={() => setSelectedPlace(place)}
-                            className="p-1.5 text-slate-400 hover:text-violet-400 bg-slate-950/60 border border-slate-800/80 hover:border-violet-500/20 rounded-md transition"
-                            title="Edit Place"
-                          >
-                            <Edit3 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => setDeletingPlace(place)}
-                            className="p-1.5 text-slate-400 hover:text-red-400 bg-slate-950/60 border border-slate-800/80 hover:border-red-500/20 rounded-md transition"
-                            title="Delete Place"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Chips */}
-                      <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-                        {mainCategory && (
-                          <span className="bg-violet-950/50 border border-violet-850 text-violet-300 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full select-none">
-                            {mainCategory}
-                          </span>
-                        )}
-                        {place.categories.slice(0, 3).map((cat) => (
-                          <span
-                            key={cat}
-                            className="bg-slate-950/80 border border-slate-850 text-slate-400 text-[9px] font-semibold px-2 py-0.5 rounded-full select-none"
-                          >
-                            {cat}
-                          </span>
-                        ))}
-                        {place.categories.length > 3 && (
-                          <span className="text-[9px] text-slate-500 font-semibold px-1 select-none">
-                            +{place.categories.length - 3} more
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Description Short Preview */}
-                    <p className="text-xs text-slate-400/90 leading-relaxed line-clamp-2 select-text py-0.5">
-                      {place.description}
-                    </p>
-
-                    {/* Info Metadata Details */}
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 border-t border-slate-850 pt-3 text-[10px] text-slate-400 select-text">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <MapPin className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
-                        <span className="truncate">{place.location}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <Users className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
-                        <span className="truncate">Crowd: {crowdLevel || "N/A"}</span>
-                      </div>
-                      {timings && (
-                        <div className="flex items-center gap-1.5 min-w-0 col-span-2">
-                          <Clock className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
-                          <span className="truncate">Best: {timings}</span>
-                        </div>
-                      )}
-                      {fee && (
-                        <div className="flex items-center gap-1.5 min-w-0 col-span-2">
-                          <Coins className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
-                          <span className="truncate">{fee}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Submitted/Footer Metadata */}
-                    <div className="border-t border-slate-850 pt-2.5 mt-auto flex items-center justify-between text-[9px] text-slate-500 select-text">
-                      <div className="flex items-center gap-1 select-none">
-                        <User className="w-3 h-3 text-slate-600" />
-                        <span>by </span>
-                        <span className="font-bold text-slate-450">{place.uploader.username}</span>
-                        <span className="text-[8px] bg-violet-950/20 border border-violet-900/30 text-violet-400 font-bold px-1 rounded-sm">
-                          {place.uploader.badge}
+              {paginatedPlaces.map((place) => (
+                <div
+                  key={place.id}
+                  className="bg-slate-900/30 border border-slate-850 rounded-xl p-5 md:p-6 backdrop-blur-sm flex flex-col gap-4 hover:border-slate-750/80 hover:bg-slate-900/50 hover:shadow-2xl hover:shadow-violet-950/5 group transition-all duration-300 relative overflow-hidden"
+                >
+                  {/* Primary Image Banner */}
+                  {place.images && place.images.length > 0 && (
+                    <div className="relative -mx-5 -mt-5 md:-mx-6 md:-mt-6 h-36 bg-slate-950 overflow-hidden border-b border-slate-850">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={place.images[0]}
+                        alt={place.placeName}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      {place.images.length > 1 && (
+                        <span className="absolute bottom-2 right-2 bg-slate-950/80 backdrop-blur-md text-slate-300 border border-slate-800 text-[9px] font-bold px-2 py-0.5 rounded-md">
+                          📷 +{place.images.length - 1} photos
                         </span>
-                      </div>
-                      <div className="text-slate-600 font-mono text-[8px]">
-                        ID: {place.id.substring(0, 8)}...
+                      )}
+                    </div>
+                  )}
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex justify-between items-start gap-3">
+                      <h3 className="text-sm font-bold text-slate-200 group-hover:text-violet-400 transition duration-200 line-clamp-1">
+                        {place.placeName}
+                      </h3>
+                      
+                      <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                        <button
+                          onClick={() => setSelectedPlace(place)}
+                          className="p-1.5 text-slate-400 hover:text-violet-400 bg-slate-950/60 border border-slate-800/80 hover:border-violet-500/20 rounded-md transition"
+                          title="Edit Place"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => setDeletingPlace(place)}
+                          className="p-1.5 text-slate-400 hover:text-red-400 bg-slate-950/60 border border-slate-800/80 hover:border-red-500/20 rounded-md transition"
+                          title="Delete Place"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
 
+                    {/* Type & Categories Chips */}
+                    <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                      <span className="bg-violet-950/60 border border-violet-800 text-violet-300 text-[9px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full select-none">
+                        {place.placeType || "Spot"}
+                      </span>
+                      {place.mainCategory && (
+                        <span className="bg-indigo-950/50 border border-indigo-850 text-indigo-300 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full select-none">
+                          {place.mainCategory}
+                        </span>
+                      )}
+                      {(place.categories || []).slice(0, 2).map((cat) => (
+                        <span
+                          key={cat}
+                          className="bg-slate-950/80 border border-slate-850 text-slate-400 text-[9px] font-semibold px-2 py-0.5 rounded-full select-none"
+                        >
+                          {cat}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                );
-              })}
+
+                  <p className="text-xs text-slate-400/90 leading-relaxed line-clamp-2 select-text py-0.5">
+                    {place.description}
+                  </p>
+
+                  {/* Metadata Details */}
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 border-t border-slate-850 pt-3 text-[10px] text-slate-400 select-text">
+                    <div className="flex items-center gap-1.5 min-w-0 col-span-2">
+                      <MapPin className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
+                      <span className="truncate">{place.area ? `${place.area}, ` : ""}{place.city}, {place.state}</span>
+                    </div>
+                    {place.bestTimings && (
+                      <div className="flex items-center gap-1.5 min-w-0 col-span-2">
+                        <Clock className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
+                        <span className="truncate">Best: {place.bestTimings}</span>
+                      </div>
+                    )}
+                    {place.entryFee && (
+                      <div className="flex items-center gap-1.5 min-w-0 col-span-2">
+                        <Coins className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
+                        <span className="truncate">Fee: {place.entryFee}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <Users className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
+                      <span className="truncate">Crowd: {place.crowdLevel || "N/A"}</span>
+                    </div>
+                    {place.closedOn && (
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <Calendar className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
+                        <span className="truncate">Closed: {place.closedOn}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Engagement & Stats Bar */}
+                  <div className="flex items-center gap-4 text-[10px] text-slate-400 bg-slate-950/40 p-2 rounded-lg border border-slate-850">
+                    <span className="flex items-center gap-1"><Heart className="w-3 h-3 text-rose-400" /> {place.likes || 0}</span>
+                    <span className="flex items-center gap-1"><Bookmark className="w-3 h-3 text-amber-400" /> {place.saves || 0}</span>
+                    <span className="flex items-center gap-1"><Eye className="w-3 h-3 text-sky-400" /> {place.visited || 0}</span>
+                  </div>
+
+                  {/* Submitted / Uploader Footer */}
+                  <div className="border-t border-slate-850 pt-2.5 mt-auto flex items-center justify-between text-[9px] text-slate-500 select-text">
+                    <div className="flex items-center gap-1 select-none">
+                      <User className="w-3 h-3 text-slate-600" />
+                      <span>by </span>
+                      <span className="font-bold text-slate-450">{place.uploaderId || "Admin"}</span>
+                    </div>
+                    <div className="text-slate-600 font-mono text-[8px]">
+                      ID: {(place.id || "").substring(0, 8)}...
+                    </div>
+                  </div>
+
+                </div>
+              ))}
             </div>
 
             {/* Pagination Controls */}
@@ -787,11 +781,10 @@ export default function PlacesManagement() {
 
       </div>
 
-      {/* Fullscreen Lazy-Loaded Edit Drawer Overlay */}
+      {/* Edit Place Modal */}
       {selectedPlace && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 overflow-y-auto p-4 md:p-10 flex justify-center items-start animate-fadeIn select-text">
           <div className="w-full max-w-5xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl relative animate-slideDown overflow-hidden my-4 md:my-0">
-            {/* Close Button */}
             <button
               onClick={() => setSelectedPlace(null)}
               className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-200 bg-slate-950/40 hover:bg-slate-950/80 border border-slate-800 rounded-lg transition z-50"
@@ -799,24 +792,23 @@ export default function PlacesManagement() {
             >
               <X className="w-4 h-4" />
             </button>
-            
-            <div className="p-6 md:p-8 border-b border-slate-850 flex flex-col gap-1 select-none">
-              <h2 className="text-xl font-extrabold text-slate-100 flex items-center gap-2">
-                <Edit3 className="w-5 h-5 text-violet-500" />
-                Edit Place Details
+
+            <div className="p-6 border-b border-slate-800 bg-slate-950/50">
+              <h2 className="text-lg font-bold text-slate-100">
+                Editing Place: <span className="text-violet-400">{selectedPlace.placeName}</span>
               </h2>
-              <p className="text-[10px] text-slate-500">
-                Place ID: <span className="font-mono text-slate-400">{selectedPlace.id}</span> | Contributed by {selectedPlace.uploader.username} ({selectedPlace.uploader.badge})
+              <p className="text-xs text-slate-400">
+                Update record values conforming strictly to the DoldFind place schema.
               </p>
             </div>
 
-            <div className="p-6 md:p-8 max-h-[calc(100vh-200px)] overflow-y-auto">
+            <div className="p-6 max-h-[80vh] overflow-y-auto scrollbar-thin">
               <PlaceForm
                 initialPlace={selectedPlace}
-                onSuccess={(updated) => {
-                  setPlaces((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+                onSuccess={(updatedPlace) => {
+                  showToast("Place details updated successfully!", "success");
+                  setPlaces((prev) => prev.map((p) => (p.id === updatedPlace.id ? updatedPlace : p)));
                   setSelectedPlace(null);
-                  showToast("Place details updated successfully.", "success");
                 }}
                 onCancel={() => setSelectedPlace(null)}
               />
@@ -827,52 +819,37 @@ export default function PlacesManagement() {
 
       {/* Delete Confirmation Modal */}
       {deletingPlace && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn select-none">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl max-w-md w-full p-6 flex flex-col gap-5 shadow-2xl animate-slideDown">
-            <div className="flex gap-3">
-              <div className="w-10 h-10 rounded-full bg-red-950/60 border border-red-900/40 flex items-center justify-center flex-shrink-0">
-                <AlertTriangle className="w-5 h-5 text-red-500" />
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl flex flex-col gap-4 animate-slideDown">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-red-950/60 border border-red-800 flex items-center justify-center flex-shrink-0">
+                <Trash2 className="w-5 h-5 text-red-400" />
               </div>
-              <div className="flex flex-col gap-1">
-                <h3 className="text-sm font-bold text-slate-200">Delete this place permanently?</h3>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Are you sure you want to delete <span className="text-slate-200 font-bold">&quot;{deletingPlace.title}&quot;</span>? This will permanently wipe the row from your Google Sheet. This action is irreversible.
-                </p>
+              <div className="flex flex-col">
+                <h3 className="text-sm font-bold text-slate-100">Delete Place</h3>
+                <span className="text-xs text-slate-400">This action cannot be undone.</span>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 border-t border-slate-850 pt-4">
+            <p className="text-xs text-slate-300 leading-relaxed bg-slate-950/50 p-3 rounded-lg border border-slate-850">
+              Are you sure you want to permanently delete <strong className="text-red-400">{deletingPlace.placeName}</strong> from the database registry?
+            </p>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
               <button
                 onClick={() => setDeletingPlace(null)}
-                className="px-4 py-2 border border-slate-800 hover:bg-slate-850 text-slate-400 hover:text-slate-200 rounded-lg text-xs font-semibold transition"
+                className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-slate-200 bg-slate-950/60 border border-slate-800 rounded-lg transition"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDeleteConfirm}
-                className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-xs font-bold shadow-lg shadow-red-500/10 transition"
+                className="px-4 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-500 rounded-lg shadow-lg transition"
               >
-                Delete
+                Delete Permanently
               </button>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Toast Notification Popups */}
-      {toast && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 border rounded-xl backdrop-blur-md shadow-2xl animate-slideUp select-none max-w-sm">
-          {toast.type === "success" ? (
-            <div className="bg-emerald-950/60 border border-emerald-800/80 rounded-xl p-3 flex items-center gap-2.5 text-emerald-300">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-              <span className="text-xs font-semibold">{toast.message}</span>
-            </div>
-          ) : (
-            <div className="bg-red-950/60 border border-red-800/80 rounded-xl p-3 flex items-center gap-2.5 text-red-300">
-              <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
-              <span className="text-xs font-semibold">{toast.message}</span>
-            </div>
-          )}
         </div>
       )}
 
@@ -887,7 +864,6 @@ export default function PlacesManagement() {
           </div>
         </div>
       </footer>
-
     </main>
   );
 }
