@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { checkRateLimit, validateSafePayload } from "@/lib/security";
 import { placeSchema } from "@/schemas/placeSchema";
-import { GoogleSheetsPlaceRepository } from "@/lib/repositories/googleSheetsPlaceRepository";
+import { getPlaceRepository } from "@/lib/repositories/getPlaceRepository";
 import { PlaceSubmissionService } from "@/lib/services/placeSubmissionService";
 import { Logger } from "@/lib/logger";
 import { AuditLogger } from "@/lib/logger/auditLogger";
@@ -82,15 +82,14 @@ export async function POST(request: NextRequest) {
         username,
         ip,
         userAgent,
-        details: { errors: "Schema validation failed." }, // Do not log complex zod schema errors details in audit logs
+        details: { errors: "Schema validation failed." },
       });
-      // Sanitize the response: only return field path and error message, avoiding implementation stack traces or variables
       const formattedErrors = parseResult.error.flatten().fieldErrors;
       return jsonError("VALIDATION_ERROR", "Validation failed. Check your inputs.", 400, formattedErrors);
     }
 
     // 6. Execute submission via Service and Repository layers
-    const repository = new GoogleSheetsPlaceRepository();
+    const repository = getPlaceRepository();
     const service = new PlaceSubmissionService(repository);
 
     const result = await service.submit(
@@ -120,7 +119,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Fallback handlers to reject unsupported methods
 export async function GET() { return jsonError("METHOD_NOT_ALLOWED", "Method not allowed.", 405); }
 export async function PUT() { return jsonError("METHOD_NOT_ALLOWED", "Method not allowed.", 405); }
 export async function DELETE() { return jsonError("METHOD_NOT_ALLOWED", "Method not allowed.", 405); }
