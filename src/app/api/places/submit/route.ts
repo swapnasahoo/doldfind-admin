@@ -7,6 +7,7 @@ import { PlaceSubmissionService } from "@/lib/services/placeSubmissionService";
 import { Logger } from "@/lib/logger";
 import { AuditLogger } from "@/lib/logger/auditLogger";
 import { jsonError, jsonSuccess } from "@/lib/utils/response";
+import { checkPlaceUniqueness } from "@/lib/utils/uniqueness";
 
 export async function POST(request: NextRequest) {
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0] || "127.0.0.1";
@@ -90,8 +91,45 @@ export async function POST(request: NextRequest) {
 
     // 6. Execute submission via Service and Repository layers
     const repository = getPlaceRepository();
-    const service = new PlaceSubmissionService(repository);
 
+    // Check uniqueness (Name, Area, State, Coordinates similarity check)
+    const existingPlaces = await repository.findAll();
+    const uniquenessResult = checkPlaceUniqueness(
+      {
+        placeName: parseResult.data.placeName,
+        area: parseResult.data.area,
+        state: parseResult.data.state,
+        latitude: parseResult.data.latitude,
+        longitude: parseResult.data.longitude,
+      },
+      existingPlaces
+    );
+
+    const forceSubmit = request.nextUrl.searchParams.get("force") === "true";
+
+    if (uniquenessResult.status === "DUPLICATE") {
+      AuditLogger.log({
+        event: "VALIDATION_FAILED",
+        username,
+        ip,
+        userAgent,
+        details: { reason: "Duplicate place submission blocked.", message: uniquenessResult.message },
+      });
+      return jsonError("DUPLICATE_PLACE", uniquenessResult.message || "This place matches an existing entry too closely.", 400);
+    }
+
+    if (uniquenessResult.status === "SIMILAR" && !forceSubmit) {
+      AuditLogger.log({
+        event: "VALIDATION_FAILED",
+        username,
+        ip,
+        userAgent,
+        details: { reason: "Similar place warning triggered.", message: uniquenessResult.message },
+      });
+      return jsonError("SIMILAR_PLACE_WARNING", uniquenessResult.message || "A similar place was found. Please review.", 400);
+    }
+
+    const service = new PlaceSubmissionService(repository);
     const result = await service.submit(
       parseResult.data,
       { username, badge },
@@ -108,14 +146,15 @@ export async function POST(request: NextRequest) {
 
     return jsonSuccess("Place submitted successfully.", result.submissionId, 201);
   } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
     AuditLogger.log({
       event: "SUBMISSION_FAILED",
       username,
       ip,
       userAgent,
-      details: { errorRaw: "An internal error occurred while processing place submission." },
+      details: { errorRaw: errMsg },
     });
-    return jsonError("INTERNAL_ERROR", "An internal error occurred while processing submission.", 500);
+    return jsonError("INTERNAL_ERROR", errMsg || "An internal error occurred while processing submission.", 500);
   }
 }
 
