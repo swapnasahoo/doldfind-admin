@@ -83,30 +83,29 @@ The project integrates with **Appwrite Cloud** using the official Node Server SD
   - The returned URL string is appended into the `images` array of the `PlaceDetails` record.
 - **Repository Factory** (`getPlaceRepository()`): Dynamically detects if `APPWRITE_PROJECT_ID` and `APPWRITE_API_KEY` are provided. When configured, it uses `AppwritePlaceRepository`. If unconfigured, it seamlessly falls back to `JsonPlaceRepository` and local file uploads.
 
-### Collection Attribute Mapping
+### Collection Attribute Mapping (Table: `place` / `places`)
 
-| Attribute Key | Type | Size / Options |
+| Attribute Key | Type | Size / Options / Constraints |
 | :--- | :--- | :--- |
-| `placeName` | String | 100 |
-| `description` | String | 5000 |
-| `placeType` | Enum / String | `"Spot"`, `"Cafe"`, `"Market"` |
-| `mainCategory` | String | 50 |
-| `categories` | String Array | Array of strings |
-| `images` | String Array | Array of Appwrite Cloud Storage view URLs |
-| `city` | String | 100 |
-| `area` | String | 100 |
-| `state` | String | 100 |
-| `latitude` | String | 20 |
-| `longitude` | String | 20 |
-| `bestTimings` | String | 200 |
-| `closedOn` | String | 100 |
-| `nearestMetro` | String | 100 |
-| `crowdLevel` | String | 50 |
-| `safetyNote` | String | 1000 |
-| `entryFee` | String | 200 |
-| `likes` | Integer | Default: 0 |
-| `saves` | Integer | Default: 0 |
-| `visited` | Integer | Default: 0 |
-| `uploaderId` | String | 100 |
-| `createdAt` | String / Datetime | ISO 8601 string |
-| `updatedAt` | String / Datetime | ISO 8601 string |
+| `placeName` | String (varchar) | Size: 128, Required |
+| `description` | String (varchar) | Size: 5000, Required |
+| `placeType` | String Enum | `"Spot"`, `"Market"`, `"Cafe"`, Required |
+| `mainCategory` | String (varchar) | Size: 32, Required |
+| `categories` | String Array (varchar) | Size: 32 per item, Optional |
+| `city` | String (varchar) | Size: 64, Required |
+| `area` | String (varchar) | Size: 150, Required |
+| `state` | String (varchar) | Size: 20, Required |
+| `latitude` | String (varchar) | Size: 12, Required |
+| `longitude` | String (varchar) | Size: 12, Required |
+| `bestTimings` | String (varchar) | Size: 32, Required |
+| `closedOn` | String (varchar) | Size: 12, Required |
+| `nearestMetro` | String (varchar) | Size: 150, Required |
+| `crowdLevel` | String Enum | `"Low"`, `"Medium"`, `"High"`, Required |
+| `safetyNote` | String (varchar) | Size: 192, Required |
+| `entryFee` | String (varchar) | Size: 128, Required |
+| `uploaderId` | String (varchar) | Size: 40, Required |
+| `uploaderBadge` | String (varchar) | Size: 20, Required |
+| `images` | String Array (text) | Appwrite Cloud Storage view URLs, Optional |
+| `likes` | Integer | Min: 0, Required |
+| `visited` | Integer | Min: 0, Required |
+| `saves` | Integer | Min: 0, Required |

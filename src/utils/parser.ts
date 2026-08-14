@@ -94,9 +94,22 @@ export function normalizePlaceDetails(formValues: PlaceFormValues): PlaceDetails
     feeValue = trimmedFee;
   }
 
+  const DAY_MAP: Record<string, string> = {
+    Monday: "Mon",
+    Tuesday: "Tue",
+    Wednesday: "Wed",
+    Thursday: "Thu",
+    Friday: "Fri",
+    Saturday: "Sat",
+    Sunday: "Sun",
+  };
+
   const closedOnStr = formValues.closedDays?.includes("Never Closed")
     ? "Never Closed"
-    : (formValues.closedDays || []).join(", ");
+    : (formValues.closedDays || [])
+        .map((d) => DAY_MAP[d] || d)
+        .join(",")
+        .slice(0, 12);
 
   const now = new Date().toISOString();
 

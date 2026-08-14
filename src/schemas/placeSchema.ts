@@ -7,7 +7,7 @@ export const placeSchema = z
     placeName: z
       .string()
       .min(3, { message: "Place name must be at least 3 characters long" })
-      .max(100, { message: "Place name cannot exceed 100 characters" }),
+      .max(128, { message: "Place name cannot exceed 128 characters" }),
     description: z
       .string()
       .min(10, { message: "Description must be at least 10 characters long" })
@@ -18,13 +18,13 @@ export const placeSchema = z
     mainCategory: z
       .string()
       .min(1, { message: "Main category is required" })
-      .max(50, { message: "Main category cannot exceed 50 characters" }),
+      .max(32, { message: "Main category cannot exceed 32 characters" }),
     categories: z
       .array(
         z
           .string()
           .min(1, { message: "Category name cannot be empty" })
-          .max(50, { message: "Category name cannot exceed 50 characters" })
+          .max(32, { message: "Category name cannot exceed 32 characters" })
       )
       .min(1, { message: "Select at least one category" })
       .max(20, { message: "Cannot select more than 20 categories" })
@@ -41,18 +41,18 @@ export const placeSchema = z
     city: z
       .string()
       .min(1, { message: "City is required" })
-      .max(100, { message: "City cannot exceed 100 characters" }),
+      .max(64, { message: "City cannot exceed 64 characters" }),
     area: z
       .string()
       .min(1, { message: "Area is required" })
-      .max(100, { message: "Area cannot exceed 100 characters" }),
+      .max(150, { message: "Area cannot exceed 150 characters" }),
     state: z
       .string()
       .min(1, { message: "State is required" })
-      .max(100, { message: "State cannot exceed 100 characters" }),
+      .max(20, { message: "State cannot exceed 20 characters" }),
     latitude: z
       .string()
-      .max(20, { message: "Latitude string too long" })
+      .max(12, { message: "Latitude string cannot exceed 12 characters" })
       .refine((val) => coordinateRegex.test(val.trim()), {
         message: "Latitude must be a valid decimal number",
       })
@@ -65,7 +65,7 @@ export const placeSchema = z
       ),
     longitude: z
       .string()
-      .max(20, { message: "Longitude string too long" })
+      .max(12, { message: "Longitude string cannot exceed 12 characters" })
       .refine((val) => coordinateRegex.test(val.trim()), {
         message: "Longitude must be a valid decimal number",
       })
@@ -98,7 +98,7 @@ export const placeSchema = z
     nearestMetro: z
       .string()
       .min(1, { message: "Nearest metro is required" })
-      .max(100, { message: "Nearest metro cannot exceed 100 characters" }),
+      .max(150, { message: "Nearest metro cannot exceed 150 characters" }),
     crowdLevel: z
       .enum(["Low", "Medium", "High", ""])
       .refine((val) => val === "Low" || val === "Medium" || val === "High", {
@@ -107,8 +107,8 @@ export const placeSchema = z
     safetyNote: z
       .string()
       .min(1, { message: "Safety note is required" })
-      .max(1000, { message: "Safety note cannot exceed 1000 characters" }),
-    entryFee: z.string().max(200, { message: "Entry fee cannot exceed 200 characters" }),
+      .max(192, { message: "Safety note cannot exceed 192 characters" }),
+    entryFee: z.string().max(128, { message: "Entry fee cannot exceed 128 characters" }),
     ticketRequired: z.enum(["Yes", "No", ""]).refine((val) => val === "Yes" || val === "No", {
       message: "Select whether a ticket is required",
     }),
