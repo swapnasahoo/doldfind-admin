@@ -5,6 +5,7 @@ import { AppwriteStorageService } from "@/lib/services/appwriteStorageService";
 import { Logger } from "@/lib/logger";
 import { AuditLogger } from "@/lib/logger/auditLogger";
 import { jsonError, jsonSuccess } from "@/lib/utils/response";
+import { compressImage } from "@/lib/utils/image";
 
 const ALLOWED_MIME_TYPES = new Set([
   "image/jpeg",
@@ -75,22 +76,33 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
+    // Compress the image (webp output, targets < 500KB)
+    const { buffer: compressedBuffer, mimeType: compressedMimeType, fileName: compressedFileName } =
+      await compressImage(buffer, file.name, file.type);
+
     // 5. Upload to Appwrite Cloud Storage Bucket
     const storageService = new AppwriteStorageService();
-    const uploadResult = await storageService.uploadImage(buffer, file.name, file.type);
+    const uploadResult = await storageService.uploadImage(compressedBuffer, compressedFileName, compressedMimeType);
 
     AuditLogger.log({
       event: "FILE_UPLOADED",
       username,
       ip,
       userAgent,
-      details: { fileName: file.name, size: file.size, fileId: uploadResult.fileId, url: uploadResult.url },
+      details: {
+        fileName: file.name,
+        originalSize: file.size,
+        compressedSize: compressedBuffer.length,
+        fileId: uploadResult.fileId,
+        url: uploadResult.url
+      },
     });
 
     return jsonSuccess("Image uploaded successfully to Appwrite Bucket.", undefined, 201, uploadResult);
-  } catch (error: any) {
-    Logger.error("Failed to process image upload:", error?.message || error);
-    return jsonError("INTERNAL_ERROR", error?.message || "An internal error occurred during file upload.", 500);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    Logger.error("Failed to process image upload:", errorMessage);
+    return jsonError("INTERNAL_ERROR", errorMessage || "An internal error occurred during file upload.", 500);
   }
 }
 
