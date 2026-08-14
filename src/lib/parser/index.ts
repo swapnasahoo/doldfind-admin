@@ -52,9 +52,23 @@ export function parseIncomingPayload(data: PlaceFormValues) {
   const longitude = cleanString(data.longitude);
 
   const bestTimings = mergeTimeSlots(data.bestTimings || []);
+
+  const DAY_MAP: Record<string, string> = {
+    Monday: "Mon",
+    Tuesday: "Tue",
+    Wednesday: "Wed",
+    Thursday: "Thu",
+    Friday: "Fri",
+    Saturday: "Sat",
+    Sunday: "Sun",
+  };
+
   const closedOn = data.closedDays?.includes("Never Closed")
     ? "Never Closed"
-    : (data.closedDays || []).join(", ");
+    : (data.closedDays || [])
+        .map((d) => DAY_MAP[d] || d)
+        .join(",")
+        .slice(0, 12);
   const nearestMetro = cleanString(data.nearestMetro);
   const crowdLevel = cleanString(data.crowdLevel);
   const safetyNote = cleanString(data.safetyNote);
