@@ -32,6 +32,7 @@ export const PlaceForm: React.FC<PlaceFormProps> = ({
   const [previewData, setPreviewData] = useState<PlaceDetails | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<PlaceDetails | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [similarWarning, setSimilarWarning] = useState<string | null>(null);
 
   const {
     register,
@@ -101,11 +102,21 @@ export const PlaceForm: React.FC<PlaceFormProps> = ({
   };
 
   const onSubmit = async (data: PlaceFormValues) => {
+    await executeSubmit(data, false);
+  };
+
+  const executeSubmit = async (data: PlaceFormValues, force: boolean) => {
     setApiError(null);
     setSubmitSuccess(null);
+    if (!force) {
+      setSimilarWarning(null);
+    }
     try {
       const isEdit = !!initialPlace;
-      const url = isEdit ? `/api/places/${initialPlace.id}` : "/api/places/submit";
+      let url = isEdit ? `/api/places/${initialPlace.id}` : "/api/places/submit";
+      if (!isEdit && force) {
+        url += "?force=true";
+      }
       const method = isEdit ? "PUT" : "POST";
 
       const res = await fetch(url, {
@@ -133,9 +144,14 @@ export const PlaceForm: React.FC<PlaceFormProps> = ({
             normalized.id = result.submissionId;
           }
           setSubmitSuccess(normalized);
+          setSimilarWarning(null);
         }
       } else {
-        setApiError(result.error?.message || "An unexpected error occurred during submission.");
+        if (result.error?.code === "SIMILAR_PLACE_WARNING") {
+          setSimilarWarning(result.error.message);
+        } else {
+          setApiError(result.error?.message || "An unexpected error occurred during submission.");
+        }
       }
     } catch (err) {
       setApiError("Failed to connect to the server. Please check your network and try again.");
@@ -147,6 +163,7 @@ export const PlaceForm: React.FC<PlaceFormProps> = ({
     reset();
     setSubmitSuccess(null);
     setApiError(null);
+    setSimilarWarning(null);
   };
 
   return (
@@ -162,6 +179,45 @@ export const PlaceForm: React.FC<PlaceFormProps> = ({
             <p className="text-xs text-red-450/80 leading-relaxed">
               {apiError}
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Similarity Warning Alert */}
+      {similarWarning && (
+        <div className="bg-amber-950/60 border border-amber-800/80 rounded-xl p-5 md:p-6 backdrop-blur-md flex flex-col md:flex-row items-start justify-between gap-4 animate-fadeIn">
+          <div className="flex gap-3">
+            <AlertTriangle className="w-6 h-6 text-amber-400 flex-shrink-0 mt-0.5" />
+            <div className="flex flex-col gap-1">
+              <h4 className="text-sm font-bold text-amber-300">
+                Uniqueness Check Review Required
+              </h4>
+              <p className="text-xs text-amber-400/80 max-w-2xl leading-relaxed">
+                {similarWarning}
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2 mt-3 md:mt-0 flex-shrink-0">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setSimilarWarning(null)}
+              className="bg-amber-955/20 border-amber-850 hover:bg-amber-900/40 text-amber-300"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => {
+                const values = getValues();
+                executeSubmit(values, true);
+              }}
+              className="bg-amber-600 hover:bg-amber-700 text-white font-medium flex-shrink-0"
+            >
+              Ignore & Submit
+            </Button>
           </div>
         </div>
       )}
