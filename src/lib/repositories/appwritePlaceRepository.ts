@@ -1,7 +1,9 @@
-import { Client, Databases, ID, Query } from "node-appwrite";
+import { Client, Databases, ID, Query, Models } from "node-appwrite";
 import { PlaceDetails, PlaceType } from "@/types/place";
 import { PlaceRepository, PlaceSubmissionAudit } from "./placeRepository.interface";
 import { Logger } from "../logger";
+
+type AppwriteDocument = Models.Document & Record<string, unknown>;
 
 export class AppwritePlaceRepository implements PlaceRepository {
   private databases: Databases | null = null;
@@ -24,6 +26,8 @@ export class AppwritePlaceRepository implements PlaceRepository {
       } catch (err) {
         Logger.error("Failed to initialize Appwrite SDK client:", err);
       }
+    } else {
+      Logger.warn("Appwrite Cloud credentials missing in environment variables.");
     }
   }
 
@@ -33,7 +37,7 @@ export class AppwritePlaceRepository implements PlaceRepository {
 
   public async save(place: PlaceDetails, audit: PlaceSubmissionAudit): Promise<string> {
     if (!this.databases) {
-      throw new Error("Appwrite Cloud is not configured. APPWRITE_PROJECT_ID and APPWRITE_API_KEY must be set.");
+      throw new Error("Appwrite Cloud is not configured.");
     }
 
     try {
@@ -55,11 +59,13 @@ export class AppwritePlaceRepository implements PlaceRepository {
         crowdLevel: place.crowdLevel,
         safetyNote: place.safetyNote,
         entryFee: place.entryFee,
-        likes: String(place.likes ?? "0"),
-        saves: String(place.saves ?? "0"),
-        visited: String(place.visited ?? "0"),
-        uploaderId: place.uploaderId,
-        uploaderBadge: place.uploaderBadge || "Founder",
+        likes: parseInt(place.likes || "0", 10) || 0,
+        saves: parseInt(place.saves || "0", 10) || 0,
+        visited: parseInt(place.visited || "0", 10) || 0,
+        uploaderId: audit.submittedBy,
+        uploaderBadge: audit.badge,
+        badge: audit.badge,
+        submissionId: audit.submissionId,
       };
 
       const doc = await this.databases.createDocument(
@@ -71,9 +77,10 @@ export class AppwritePlaceRepository implements PlaceRepository {
 
       Logger.info(`Place document created in Appwrite Cloud with Document ID: ${doc.$id}`);
       return audit.submissionId;
-    } catch (error: any) {
-      Logger.error("Failed to create document in Appwrite Cloud:", error?.message || error);
-      throw new Error(`Appwrite Cloud error: ${error?.message || "Failed to create document"}`);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      Logger.error("Failed to create document in Appwrite Cloud:", msg);
+      throw new Error(`Appwrite Cloud error: ${msg}`);
     }
   }
 
@@ -89,36 +96,40 @@ export class AppwritePlaceRepository implements PlaceRepository {
         [Query.orderDesc("$createdAt"), Query.limit(100)]
       );
 
-      return res.documents.map((doc: any) => ({
-        id: doc.$id || doc.id,
-        placeName: doc.placeName || "Untitled Place",
-        description: doc.description || "",
-        placeType: (doc.placeType || "Spot") as PlaceType,
-        mainCategory: doc.mainCategory || "General",
-        categories: Array.isArray(doc.categories) ? doc.categories : [],
-        images: Array.isArray(doc.images) ? doc.images : [],
-        city: doc.city || "",
-        area: doc.area || "",
-        state: doc.state || "",
-        latitude: doc.latitude || "0",
-        longitude: doc.longitude || "0",
-        bestTimings: doc.bestTimings || "",
-        closedOn: doc.closedOn || "",
-        nearestMetro: doc.nearestMetro || "",
-        crowdLevel: doc.crowdLevel || "",
-        safetyNote: doc.safetyNote || "",
-        entryFee: doc.entryFee || "",
-        likes: String(doc.likes ?? "0"),
-        saves: String(doc.saves ?? "0"),
-        visited: String(doc.visited ?? "0"),
-        uploaderId: doc.uploaderId || "Admin",
-        uploaderBadge: doc.uploaderBadge || doc.badge || "Founder",
-        createdAt: doc.$createdAt || doc.createdAt || new Date().toISOString(),
-        updatedAt: doc.$updatedAt || doc.updatedAt || new Date().toISOString(),
-      }));
-    } catch (error: any) {
-      Logger.error("Failed to list documents from Appwrite Cloud:", error?.message || error);
-      throw new Error(`Appwrite Cloud error: ${error?.message || "Failed to fetch documents"}`);
+      return res.documents.map((rawDoc) => {
+        const doc = rawDoc as AppwriteDocument;
+        return {
+          id: doc.$id,
+          placeName: (doc.placeName as string) || "Untitled Place",
+          description: (doc.description as string) || "",
+          placeType: ((doc.placeType as string) || "Spot") as PlaceType,
+          mainCategory: (doc.mainCategory as string) || "General",
+          categories: Array.isArray(doc.categories) ? (doc.categories as string[]) : [],
+          images: Array.isArray(doc.images) ? (doc.images as string[]) : [],
+          city: (doc.city as string) || "",
+          area: (doc.area as string) || "",
+          state: (doc.state as string) || "",
+          latitude: (doc.latitude as string) || "0",
+          longitude: (doc.longitude as string) || "0",
+          bestTimings: (doc.bestTimings as string) || "",
+          closedOn: (doc.closedOn as string) || "",
+          nearestMetro: (doc.nearestMetro as string) || "",
+          crowdLevel: (doc.crowdLevel as string) || "",
+          safetyNote: (doc.safetyNote as string) || "",
+          entryFee: (doc.entryFee as string) || "",
+          likes: String(doc.likes ?? 0),
+          saves: String(doc.saves ?? 0),
+          visited: String(doc.visited ?? 0),
+          uploaderId: (doc.uploaderId as string) || "Admin",
+          uploaderBadge: (doc.uploaderBadge as string) || (doc.badge as string) || "Founder",
+          createdAt: doc.$createdAt || new Date().toISOString(),
+          updatedAt: doc.$updatedAt || new Date().toISOString(),
+        };
+      });
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      Logger.error("Failed to list documents from Appwrite Cloud:", msg);
+      throw new Error(`Appwrite Cloud error: ${msg}`);
     }
   }
 
@@ -146,9 +157,9 @@ export class AppwritePlaceRepository implements PlaceRepository {
         crowdLevel: place.crowdLevel,
         safetyNote: place.safetyNote,
         entryFee: place.entryFee,
-        likes: String(place.likes ?? "0"),
-        saves: String(place.saves ?? "0"),
-        visited: String(place.visited ?? "0"),
+        likes: parseInt(place.likes || "0", 10) || 0,
+        saves: parseInt(place.saves || "0", 10) || 0,
+        visited: parseInt(place.visited || "0", 10) || 0,
         uploaderId: place.uploaderId,
         uploaderBadge: place.uploaderBadge || "Founder",
       };
@@ -161,9 +172,10 @@ export class AppwritePlaceRepository implements PlaceRepository {
       );
 
       Logger.info(`Place document ${id} updated in Appwrite Cloud.`);
-    } catch (error: any) {
-      Logger.error(`Failed to update document ${id} in Appwrite Cloud:`, error?.message || error);
-      throw new Error(`Appwrite Cloud error: ${error?.message || "Failed to update document"}`);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      Logger.error(`Failed to update document ${id} in Appwrite Cloud:`, msg);
+      throw new Error(`Appwrite Cloud error: ${msg}`);
     }
   }
 
@@ -180,9 +192,10 @@ export class AppwritePlaceRepository implements PlaceRepository {
       );
 
       Logger.info(`Place document ${id} deleted from Appwrite Cloud.`);
-    } catch (error: any) {
-      Logger.error(`Failed to delete document ${id} from Appwrite Cloud:`, error?.message || error);
-      throw new Error(`Appwrite Cloud error: ${error?.message || "Failed to delete document"}`);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      Logger.error(`Failed to delete document ${id} from Appwrite Cloud:`, msg);
+      throw new Error(`Appwrite Cloud error: ${msg}`);
     }
   }
 }
