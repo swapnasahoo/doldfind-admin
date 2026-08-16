@@ -8,6 +8,7 @@ import { Logger } from "@/lib/logger";
 import { AuditLogger } from "@/lib/logger/auditLogger";
 import { jsonError, jsonSuccess } from "@/lib/utils/response";
 import { checkPlaceUniqueness } from "@/lib/utils/uniqueness";
+import { PlaceFormValues } from "@/types/place";
 
 export async function POST(request: NextRequest) {
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0] || "127.0.0.1";
@@ -131,7 +132,7 @@ export async function POST(request: NextRequest) {
 
     const service = new PlaceSubmissionService(repository);
     const result = await service.submit(
-      parseResult.data,
+      parseResult.data as PlaceFormValues,
       { username, badge },
       { ip, userAgent }
     );

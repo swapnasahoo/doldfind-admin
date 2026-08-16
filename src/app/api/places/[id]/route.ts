@@ -7,7 +7,7 @@ import { parseIncomingPayload } from "@/lib/parser";
 import { Logger } from "@/lib/logger";
 import { AuditLogger } from "@/lib/logger/auditLogger";
 import { jsonError, jsonSuccess } from "@/lib/utils/response";
-import { PlaceDetails } from "@/types/place";
+import { PlaceDetails, PlaceFormValues } from "@/types/place";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -97,7 +97,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     // 6. Normalize the update payload
-    const parsed = parseIncomingPayload(parseResult.data);
+    const parsed = parseIncomingPayload(parseResult.data as PlaceFormValues);
 
     const repository = getPlaceRepository();
 
@@ -112,19 +112,21 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       city: parsed.city,
       area: parsed.area,
       state: parsed.state,
-      latitude: parsed.latitude,
-      longitude: parsed.longitude,
       bestTimings: parsed.bestTimings,
       closedOn: parsed.closedOn,
       nearestMetro: parsed.nearestMetro,
       crowdLevel: parsed.crowdLevel,
       safetyNote: parsed.safetyNote,
       entryFee: parsed.entryFee,
-      likes: String(body.likes ?? "0"),
-      saves: String(body.saves ?? "0"),
-      visited: String(body.visited ?? "0"),
+      likes: Number(body.likes ?? 0),
+      saves: Number(body.saves ?? 0),
+      visited: Number(body.visited ?? 0),
       uploaderId: username,
       uploaderBadge: badge,
+      bestSeason: parsed.bestSeason,
+      openingHours: parsed.openingHours,
+      transportType: parsed.transportType,
+      coordinates: parsed.coordinates,
     };
 
     // 7. Persist update in repository
