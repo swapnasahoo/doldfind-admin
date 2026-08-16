@@ -98,7 +98,12 @@ export function checkPlaceUniqueness(
     const nameSim = getStringSimilarity(name, existing.placeName);
     const areaSim = getStringSimilarity(area, existing.area);
     const stateSim = getStringSimilarity(state, existing.state);
-    const distanceKm = getCoordinateDistanceKm(lat, lon, existing.latitude, existing.longitude);
+    const distanceKm = getCoordinateDistanceKm(
+      lat,
+      lon,
+      existing.coordinates ? String(existing.coordinates[1]) : "0",
+      existing.coordinates ? String(existing.coordinates[0]) : "0"
+    );
 
     const isExactName = nameSim >= 0.95;
     const isVerySimilarName = nameSim >= 0.85;
