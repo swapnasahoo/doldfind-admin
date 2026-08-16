@@ -42,7 +42,7 @@ export const PlaceForm: React.FC<PlaceFormProps> = ({
     reset,
     formState: { errors, isValid, isSubmitting },
   } = useForm<PlaceFormValues>({
-    resolver: zodResolver(placeSchema),
+    resolver: zodResolver(placeSchema) as any,
     mode: "onTouched",
     defaultValues: {
       placeName: "",
@@ -63,6 +63,27 @@ export const PlaceForm: React.FC<PlaceFormProps> = ({
       safetyNote: "",
       entryFee: "",
       ticketRequired: "",
+      bestSeason: {
+        startMonth: "October",
+        endMonth: "March",
+      },
+      openingHours: {
+        mode: "24h",
+        sameTime: {
+          start: "09:00 AM",
+          end: "06:00 PM",
+        },
+        days: {
+          Monday: { status: "open", start: "09:00 AM", end: "06:00 PM" },
+          Tuesday: { status: "open", start: "09:00 AM", end: "06:00 PM" },
+          Wednesday: { status: "open", start: "09:00 AM", end: "06:00 PM" },
+          Thursday: { status: "open", start: "09:00 AM", end: "06:00 PM" },
+          Friday: { status: "open", start: "09:00 AM", end: "06:00 PM" },
+          Saturday: { status: "open", start: "09:00 AM", end: "06:00 PM" },
+          Sunday: { status: "open", start: "09:00 AM", end: "06:00 PM" },
+        },
+      },
+      transportType: "Bus",
     },
   });
 
@@ -90,6 +111,27 @@ export const PlaceForm: React.FC<PlaceFormProps> = ({
         safetyNote: "",
         entryFee: "",
         ticketRequired: "",
+        bestSeason: {
+          startMonth: "October",
+          endMonth: "March",
+        },
+        openingHours: {
+          mode: "24h",
+          sameTime: {
+            start: "09:00 AM",
+            end: "06:00 PM",
+          },
+          days: {
+            Monday: { status: "open", start: "09:00 AM", end: "06:00 PM" },
+            Tuesday: { status: "open", start: "09:00 AM", end: "06:00 PM" },
+            Wednesday: { status: "open", start: "09:00 AM", end: "06:00 PM" },
+            Thursday: { status: "open", start: "09:00 AM", end: "06:00 PM" },
+            Friday: { status: "open", start: "09:00 AM", end: "06:00 PM" },
+            Saturday: { status: "open", start: "09:00 AM", end: "06:00 PM" },
+            Sunday: { status: "open", start: "09:00 AM", end: "06:00 PM" },
+          },
+        },
+        transportType: "Bus",
       });
     }
   }, [initialPlace, reset]);

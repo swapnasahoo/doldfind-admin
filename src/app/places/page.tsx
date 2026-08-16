@@ -27,8 +27,31 @@ import {
   Eye,
   Calendar,
   Layers,
+  Sun,
+  Bus,
 } from "lucide-react";
 import { PlaceDetails } from "@/types/place";
+
+function formatOpeningHoursSummary(openingHoursStr?: string): string {
+  if (!openingHoursStr) return "N/A";
+  try {
+    const parsed = JSON.parse(openingHoursStr);
+    if (parsed && typeof parsed === "object") {
+      if (parsed.mode === "24h") return "24 Hours";
+      if (parsed.mode === "same") return `${parsed.sameTime?.start} - ${parsed.sameTime?.end}`;
+      if (parsed.mode === "custom") {
+        const openDays = Object.entries(parsed.days || {})
+          .filter(([_, d]: any) => d.status === "open")
+          .map(([day]) => day.substring(0, 3));
+        if (openDays.length === 0) return "Closed all days";
+        return `Custom (${openDays.join(", ")})`;
+      }
+    }
+  } catch (e) {
+    if (openingHoursStr === "Open 24 Hours") return "24 Hours";
+  }
+  return openingHoursStr || "N/A";
+}
 
 interface SessionInfo {
   username: string;
@@ -691,7 +714,25 @@ export default function PlacesManagement() {
                     {place.bestTimings && (
                       <div className="flex items-center gap-1.5 min-w-0 col-span-2">
                         <Clock className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
-                        <span className="truncate">Best: {place.bestTimings}</span>
+                        <span className="truncate">Best Timings: {place.bestTimings}</span>
+                      </div>
+                    )}
+                    {place.openingHours && (
+                      <div className="flex items-center gap-1.5 min-w-0 col-span-2">
+                        <Compass className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
+                        <span className="truncate">Opening Hours: {formatOpeningHoursSummary(place.openingHours)}</span>
+                      </div>
+                    )}
+                    {place.bestSeason && (
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <Sun className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
+                        <span className="truncate">Season: {place.bestSeason}</span>
+                      </div>
+                    )}
+                    {place.transportType && (
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <Bus className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
+                        <span className="truncate">Transit: {place.transportType}</span>
                       </div>
                     )}
                     {place.entryFee && (
