@@ -9,7 +9,7 @@ if (!secretText || secretText.length < 32) {
 }
 const encodedSecret = new TextEncoder().encode(secretText);
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
   // 1. Skip check for public API endpoints

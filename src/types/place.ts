@@ -36,11 +36,13 @@ export interface PlaceDetails {
 
   createdAt?: string;
   updatedAt?: string;
+  credits?: string;
 }
 
 export interface PlaceFormValues {
   placeName: string;
   description: string;
+  credits?: string;
   placeType: PlaceType | "";
   mainCategory: string;
   categories: string[];

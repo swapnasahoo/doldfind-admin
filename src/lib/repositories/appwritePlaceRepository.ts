@@ -66,6 +66,7 @@ export class AppwritePlaceRepository implements PlaceRepository {
         openingHours: place.openingHours,
         transportType: place.transportType,
         coordinates: place.coordinates || [0, 0],
+        credits: (place.credits || "").slice(0, 256),
       };
 
       const doc = await this.databases.createDocument(
@@ -126,6 +127,7 @@ export class AppwritePlaceRepository implements PlaceRepository {
           coordinates: Array.isArray(doc.coordinates) ? (doc.coordinates as [number, number]) : [0, 0],
           createdAt: doc.$createdAt || new Date().toISOString(),
           updatedAt: doc.$updatedAt || new Date().toISOString(),
+          credits: (doc.credits as string) || "",
         };
       });
     } catch (error: unknown) {
@@ -166,6 +168,7 @@ export class AppwritePlaceRepository implements PlaceRepository {
         openingHours: place.openingHours,
         transportType: place.transportType,
         coordinates: place.coordinates || [0, 0],
+        credits: (place.credits || "").slice(0, 256),
       };
 
       await this.databases.updateDocument(
