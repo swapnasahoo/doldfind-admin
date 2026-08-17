@@ -15,6 +15,7 @@ import {
   Building2,
   Landmark,
   Compass,
+  Plus,
 } from "lucide-react";
 
 import { Input } from "./ui/Input";
@@ -92,6 +93,28 @@ const WEEK_DAYS = [
 
 // Crowd Levels
 const CROWD_LEVELS = ["Low", "Medium", "High"];
+
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+const HOURS_OF_DAY = [
+  "12:00 AM", "01:00 AM", "02:00 AM", "03:00 AM", "04:00 AM", "05:00 AM",
+  "06:00 AM", "07:00 AM", "08:00 AM", "09:00 AM", "10:00 AM", "11:00 AM",
+  "12:00 PM", "01:00 PM", "02:00 PM", "03:00 PM", "04:00 PM", "05:00 PM",
+  "06:00 PM", "07:00 PM", "08:00 PM", "09:00 PM", "10:00 PM", "11:00 PM"
+];
 
 export const QuickInfoSection: React.FC<QuickInfoSectionProps> = ({
   control,
@@ -217,6 +240,23 @@ export const QuickInfoSection: React.FC<QuickInfoSectionProps> = ({
                         />
                       </div>
 
+                      {/* Show Add Custom option if search query is entered and not matching presets */}
+                      {catSearch.trim() && !CATEGORY_PRESETS.some(opt => opt.toLowerCase() === catSearch.trim().toLowerCase()) && (
+                        <button
+                          key="custom-main-category"
+                          type="button"
+                          onClick={() => {
+                            field.onChange(catSearch.trim());
+                            setIsCatDropdownOpen(false);
+                            setCatSearch("");
+                          }}
+                          className="w-full flex items-center gap-1.5 text-left px-3 py-2.5 text-xs text-emerald-400 hover:bg-slate-800/80 rounded-md font-semibold transition-colors group mb-1.5 border border-dashed border-emerald-900/50"
+                        >
+                          <Plus className="w-3.5 h-3.5 group-hover:scale-110 transition-transform text-emerald-400" />
+                          Add custom: &quot;{catSearch.trim()}&quot;
+                        </button>
+                      )}
+
                       {filteredCategories.length > 0 ? (
                         filteredCategories.map((cat) => (
                           <button
@@ -235,11 +275,11 @@ export const QuickInfoSection: React.FC<QuickInfoSectionProps> = ({
                             )}
                           </button>
                         ))
-                      ) : (
+                      ) : !catSearch.trim() ? (
                         <div className="px-3 py-4 text-center text-xs text-slate-500 select-none">
                           No presets found.
                         </div>
-                      )}
+                      ) : null}
                     </div>
                   )}
                 </>
@@ -430,14 +470,283 @@ export const QuickInfoSection: React.FC<QuickInfoSectionProps> = ({
           />
         </div>
 
-        {/* Nearest Metro & Crowd Level */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {/* Best Season */}
+        <div className="flex flex-col gap-2">
+          <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 select-none flex items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5 text-violet-400" />
+            Best Season (Required)
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">From Month</label>
+              <Controller
+                control={control}
+                name="bestSeason.startMonth"
+                render={({ field }) => (
+                  <select
+                    {...field}
+                    className="w-full bg-slate-900/60 border border-slate-800 rounded-lg px-4 py-2.5 text-sm text-slate-100 outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-500/20 transition-all duration-200"
+                  >
+                    {MONTHS.map((m) => (
+                      <option key={m} value={m} className="bg-slate-950 text-slate-100">
+                        {m}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">To Month</label>
+              <Controller
+                control={control}
+                name="bestSeason.endMonth"
+                render={({ field }) => (
+                  <select
+                    {...field}
+                    className="w-full bg-slate-900/60 border border-slate-800 rounded-lg px-4 py-2.5 text-sm text-slate-100 outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-500/20 transition-all duration-200"
+                  >
+                    {MONTHS.map((m) => (
+                      <option key={m} value={m} className="bg-slate-950 text-slate-100">
+                        {m}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              />
+            </div>
+          </div>
+          {errors.bestSeason && (
+            <span className="text-xs font-medium text-red-400 animate-fadeIn">
+              {errors.bestSeason.message}
+            </span>
+          )}
+        </div>
+
+        {/* Opening Hours */}
+        <div className="flex flex-col gap-3 border-t border-slate-850 pt-4 mt-2">
+          <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 select-none flex items-center gap-1.5">
+            <Clock className="w-3.5 h-3.5 text-violet-400" />
+            Opening Hours (Required)
+          </label>
+          
+          <Controller
+            control={control}
+            name="openingHours.mode"
+            render={({ field }) => {
+              const mode = field.value;
+              return (
+                <div className="flex flex-col gap-4">
+                  {/* Mode Tabs */}
+                  <div className="flex border border-slate-800 rounded-lg p-0.5 bg-slate-950/40 w-full sm:w-fit">
+                    {(["24h", "same", "custom"] as const).map((m) => {
+                      const label = m === "24h" ? "Open 24 Hours" : m === "same" ? "Same Time Everyday" : "Custom Daily Hours";
+                      return (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => field.onChange(m)}
+                          className={`flex-1 sm:flex-initial text-center py-2 px-4 text-xs font-semibold rounded-md transition-all duration-200 ${
+                            mode === m
+                              ? "bg-violet-600 text-white shadow-[0_0_12px_rgba(124,58,237,0.3)] font-bold"
+                              : "text-slate-400 hover:text-slate-200 hover:bg-slate-900/30"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Mode-Specific Settings */}
+                  {mode === "24h" && (
+                    <div className="bg-slate-950/30 border border-slate-850 rounded-lg p-4 animate-fadeIn">
+                      <p className="text-xs text-emerald-400/85 font-semibold">
+                        ✓ Place is configured as open 24 hours a day, 7 days a week.
+                      </p>
+                    </div>
+                  )}
+
+                  {mode === "same" && (
+                    <div className="bg-slate-950/30 border border-slate-850 rounded-lg p-4 flex flex-col sm:flex-row gap-4 animate-fadeIn">
+                      <div className="flex-1 flex flex-col gap-1.5">
+                        <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Start Time</label>
+                        <Controller
+                          control={control}
+                          name="openingHours.sameTime.start"
+                          render={({ field: startField }) => (
+                            <select
+                              {...startField}
+                              className="w-full bg-slate-900/60 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-100 outline-none focus:border-violet-500 transition"
+                            >
+                              {HOURS_OF_DAY.map((h) => (
+                                <option key={h} value={h} className="bg-slate-950 text-slate-100">{h}</option>
+                              ))}
+                            </select>
+                          )}
+                        />
+                      </div>
+                      <div className="flex-1 flex flex-col gap-1.5">
+                        <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">End Time</label>
+                        <Controller
+                          control={control}
+                          name="openingHours.sameTime.end"
+                          render={({ field: endField }) => (
+                            <select
+                              {...endField}
+                              className="w-full bg-slate-900/60 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-100 outline-none focus:border-violet-500 transition"
+                            >
+                              {HOURS_OF_DAY.map((h) => (
+                                <option key={h} value={h} className="bg-slate-950 text-slate-100">{h}</option>
+                              ))}
+                            </select>
+                          )}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {mode === "custom" && (
+                    <div className="bg-slate-950/30 border border-slate-850 rounded-lg p-4 flex flex-col gap-3.5 animate-fadeIn">
+                      {WEEK_DAYS.map((day) => (
+                        <div key={day} className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-900 last:border-b-0 pb-3 last:pb-0 gap-3">
+                          <div className="flex items-center justify-between sm:justify-start gap-4">
+                            <span className="text-xs font-bold text-slate-300 w-24">{day}</span>
+                            
+                            {/* Open/Closed Toggle */}
+                            <Controller
+                              control={control}
+                              name={`openingHours.days.${day}.status`}
+                              render={({ field: statusField }) => (
+                                <div className="flex border border-slate-800 rounded-lg p-0.5 bg-slate-900/40 w-fit">
+                                  {(["open", "closed"] as const).map((s) => (
+                                    <button
+                                      key={s}
+                                      type="button"
+                                      onClick={() => statusField.onChange(s)}
+                                      className={`py-1 px-3 text-[10px] font-bold rounded-md transition-all ${
+                                        statusField.value === s
+                                          ? "bg-emerald-600 text-white shadow-[0_0_8px_rgba(16,185,129,0.2)]"
+                                          : "bg-red-600 text-white shadow-[0_0_8px_rgba(239,68,68,0.2)]"
+                                      }`}
+                                    >
+                                      {s === "open" ? "Open" : "Closed"}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            />
+                          </div>
+
+                          {/* Day-specific Time Selectors */}
+                          <Controller
+                            control={control}
+                            name={`openingHours.days.${day}.status`}
+                            render={({ field: statusField }) => {
+                              const isOpen = statusField.value === "open";
+                              return (
+                                <div className={`flex items-center gap-3 transition-opacity duration-200 ${isOpen ? "opacity-100 pointer-events-auto" : "opacity-30 pointer-events-none"}`}>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-[10px] text-slate-500 uppercase tracking-wider">Start</span>
+                                    <Controller
+                                      control={control}
+                                      name={`openingHours.days.${day}.start`}
+                                      render={({ field: startField }) => (
+                                        <select
+                                          {...startField}
+                                          disabled={!isOpen}
+                                          className="bg-slate-900/60 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 outline-none focus:border-violet-500 transition w-32"
+                                        >
+                                          {HOURS_OF_DAY.map((h) => (
+                                            <option key={h} value={h} className="bg-slate-950 text-slate-100">{h}</option>
+                                          ))}
+                                        </select>
+                                      )}
+                                    />
+                                  </div>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-[10px] text-slate-500 uppercase tracking-wider">End</span>
+                                    <Controller
+                                      control={control}
+                                      name={`openingHours.days.${day}.end`}
+                                      render={({ field: endField }) => (
+                                        <select
+                                          {...endField}
+                                          disabled={!isOpen}
+                                          className="bg-slate-900/60 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 outline-none focus:border-violet-500 transition w-32"
+                                        >
+                                          {HOURS_OF_DAY.map((h) => (
+                                            <option key={h} value={h} className="bg-slate-950 text-slate-100">{h}</option>
+                                          ))}
+                                        </select>
+                                      )}
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            }}
+          />
+          {errors.openingHours && (
+            <span className="text-xs font-medium text-red-400 animate-fadeIn">
+              {errors.openingHours.message}
+            </span>
+          )}
+        </div>
+
+        {/* Nearest Metro, Transport Type & Crowd Level */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           <div className="flex flex-col gap-1.5">
             <Input
               label="Nearest Metro"
               placeholder="e.g. Master Canteen, Central Station"
               error={errors.nearestMetro?.message}
               {...register("nearestMetro")}
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 select-none">
+              Transport Type (Required)
+            </label>
+            <Controller
+              control={control}
+              name="transportType"
+              render={({ field }) => (
+                <div className="flex flex-col gap-2">
+                  <div className="flex border border-slate-800 rounded-lg p-0.5 bg-slate-950/40 w-fit min-w-[160px]">
+                    {["Bus", "Metro"].map((opt) => {
+                      const isSelected = field.value === opt;
+                      return (
+                        <button
+                          key={opt}
+                          type="button"
+                          onClick={() => field.onChange(opt)}
+                          className={`flex-1 text-center py-2 px-6 text-xs font-semibold rounded-md transition-all duration-200 ${
+                            isSelected
+                              ? "bg-violet-600 text-white shadow-[0_0_12px_rgba(124,58,237,0.3)] font-bold"
+                              : "text-slate-400 hover:text-slate-200 hover:bg-slate-905/30"
+                          }`}
+                        >
+                          {opt}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {errors.transportType && (
+                    <span className="text-xs font-medium text-red-400 animate-fadeIn">
+                      {errors.transportType.message}
+                    </span>
+                  )}
+                </div>
+              )}
             />
           </div>
 

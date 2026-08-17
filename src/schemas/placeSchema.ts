@@ -120,6 +120,28 @@ export const placeSchema = z
         })
       )
       .optional(),
+    bestSeason: z.object({
+      startMonth: z.string().min(1, { message: "Start month is required" }),
+      endMonth: z.string().min(1, { message: "End month is required" }),
+    }),
+    openingHours: z.object({
+      mode: z.enum(["24h", "same", "custom"]),
+      sameTime: z.object({
+        start: z.string(),
+        end: z.string(),
+      }),
+      days: z.record(
+        z.string(),
+        z.object({
+          status: z.enum(["open", "closed"]),
+          start: z.string(),
+          end: z.string(),
+        })
+      ),
+    }),
+    transportType: z.enum(["Bus", "Metro"], {
+      message: "Transport type must be Bus or Metro",
+    }),
   })
   .strict()
   .superRefine((data, ctx) => {

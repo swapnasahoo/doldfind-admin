@@ -84,6 +84,14 @@ export function parseIncomingPayload(data: PlaceFormValues) {
     entryFee = rawFee;
   }
 
+  const bestSeason = `${cleanString(data.bestSeason?.startMonth || "October")} to ${cleanString(data.bestSeason?.endMonth || "March")}`;
+  const openingHours = JSON.stringify(data.openingHours);
+  const transportType = cleanString(data.transportType);
+  const coordinates: [number, number] = [
+    parseFloat(data.longitude) || 0,
+    parseFloat(data.latitude) || 0,
+  ];
+
   return {
     placeName,
     description,
@@ -102,5 +110,9 @@ export function parseIncomingPayload(data: PlaceFormValues) {
     crowdLevel,
     safetyNote,
     entryFee,
+    bestSeason,
+    openingHours,
+    transportType,
+    coordinates,
   };
 }

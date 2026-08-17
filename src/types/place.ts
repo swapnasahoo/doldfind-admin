@@ -15,9 +15,6 @@ export interface PlaceDetails {
   area: string;
   state: string;
 
-  latitude: string;
-  longitude: string;
-
   bestTimings: string;
   closedOn: string;
   nearestMetro: string;
@@ -25,12 +22,17 @@ export interface PlaceDetails {
   safetyNote: string;
   entryFee: string;
 
-  likes: string;
-  saves: string;
-  visited: string;
+  likes: number;
+  saves: number;
+  visited: number;
 
   uploaderId: string;
   uploaderBadge: string;
+
+  bestSeason: string;
+  openingHours: string;
+  transportType: string;
+  coordinates: [number, number]; // [longitude, latitude]
 
   createdAt?: string;
   updatedAt?: string;
@@ -68,4 +70,23 @@ export interface PlaceFormValues {
   entryFee: string;
   ticketRequired: "Yes" | "No" | "";
   infoCards?: { label: string; value: string }[];
+
+  // New fields
+  bestSeason: {
+    startMonth: string;
+    endMonth: string;
+  };
+  openingHours: {
+    mode: "24h" | "same" | "custom";
+    sameTime: {
+      start: string;
+      end: string;
+    };
+    days: Record<string, {
+      status: "open" | "closed";
+      start: string;
+      end: string;
+    }>;
+  };
+  transportType: string;
 }
