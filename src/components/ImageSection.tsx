@@ -256,14 +256,15 @@ export const ImageSection: React.FC<ImageSectionProps> = ({ control, errors }) =
                 </span>
               )}
 
-              {/* Uploaded Images Gallery Grid */}
+              {/* Uploaded Images Gallery Grid & Attribute Preview */}
               {currentImages.length > 0 ? (
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between text-xs text-slate-400">
-                    <span className="font-semibold text-slate-300">
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between text-xs text-slate-400 border-b border-slate-850 pb-2">
+                    <span className="font-semibold text-slate-200 flex items-center gap-1.5">
+                      <ImageIcon className="w-3.5 h-3.5 text-violet-400" />
                       Attached Photos ({currentImages.length}/10)
                     </span>
-                    <span className="text-[11px] text-slate-500">
+                    <span className="text-[11px] text-slate-400">
                       First image is used as primary cover
                     </span>
                   </div>
@@ -271,6 +272,12 @@ export const ImageSection: React.FC<ImageSectionProps> = ({ control, errors }) =
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                     {currentImages.map((imgUrl, index) => {
                       const isAppwriteBucket = imgUrl.includes("/storage/buckets/");
+                      let domainStr = "";
+                      try {
+                        domainStr = new URL(imgUrl).hostname;
+                      } catch {
+                        domainStr = "external-link";
+                      }
 
                       return (
                         <div
@@ -287,24 +294,32 @@ export const ImageSection: React.FC<ImageSectionProps> = ({ control, errors }) =
                             }}
                           />
 
-                          <div className="absolute inset-0 bg-slate-950/70 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-2 p-2">
-                            <a
-                              href={imgUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="p-1.5 bg-slate-900/90 hover:bg-slate-800 rounded-lg text-slate-300 hover:text-white transition"
-                              title="Open image full view"
-                            >
-                              <LinkIcon className="w-3.5 h-3.5" />
-                            </a>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveImage(index)}
-                              className="p-1.5 bg-red-955/90 hover:bg-red-900 border border-red-800 rounded-lg text-red-300 transition"
-                              title="Remove photo"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
+                          <div className="absolute inset-0 bg-slate-950/75 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-between p-2">
+                            <div className="w-full flex items-center justify-between">
+                              <span className="text-[9px] font-mono text-slate-300 truncate max-w-[100px] bg-slate-900/80 px-1.5 py-0.5 rounded">
+                                #{index + 1} {domainStr}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <a
+                                href={imgUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="p-1.5 bg-slate-900/90 hover:bg-slate-800 rounded-lg text-slate-300 hover:text-white transition"
+                                title="Open image full view"
+                              >
+                                <LinkIcon className="w-3.5 h-3.5" />
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveImage(index)}
+                                className="p-1.5 bg-red-955/90 hover:bg-red-900 border border-red-800 rounded-lg text-red-300 transition"
+                                title="Remove photo"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
 
                           {/* Appwrite Badge */}
@@ -325,10 +340,26 @@ export const ImageSection: React.FC<ImageSectionProps> = ({ control, errors }) =
                       );
                     })}
                   </div>
+
+                  {/* Images Attribute Payload Live Preview Box */}
+                  <div className="bg-slate-950/60 border border-slate-850 rounded-xl p-3.5 flex flex-col gap-2 font-mono text-xs">
+                    <div className="flex items-center justify-between text-[11px] text-slate-400 font-sans border-b border-slate-850 pb-1.5">
+                      <span className="font-bold text-violet-400 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                        &quot;images&quot; Attribute Live Payload ({currentImages.length} URL{currentImages.length > 1 ? "s" : ""})
+                      </span>
+                    </div>
+                    <pre className="text-[11px] text-emerald-400/90 overflow-x-auto whitespace-pre-wrap font-mono leading-relaxed bg-slate-950 p-2.5 rounded-lg border border-slate-900">
+                      {JSON.stringify(currentImages, null, 2)}
+                    </pre>
+                  </div>
                 </div>
               ) : (
-                <div className="text-center py-2 select-none">
-                  <p className="text-xs text-slate-500">No images attached yet.</p>
+                <div className="text-center py-3 bg-slate-950/30 border border-dashed border-slate-850 rounded-xl select-none flex flex-col items-center gap-1">
+                  <p className="text-xs text-slate-400">No images attached yet.</p>
+                  <p className="text-[10px] text-slate-500">
+                    Add image URLs or upload files to update the &quot;images&quot; payload attribute in real time.
+                  </p>
                 </div>
               )}
             </div>
