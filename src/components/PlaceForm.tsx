@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useForm, Controller } from "react-hook-form";
+import React, { useState, useEffect, useMemo } from "react";
+import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, FileCode, CheckCircle2, AlertTriangle, RefreshCw } from "lucide-react";
+import { Eye, FileCode, CheckCircle2, AlertTriangle, RefreshCw, Copy, Check, Sparkles } from "lucide-react";
 
 import { placeSchema } from "@/schemas/placeSchema";
 import { PlaceFormValues, PlaceDetails } from "@/types/place";
@@ -33,6 +33,7 @@ export const PlaceForm: React.FC<PlaceFormProps> = ({
   const [submitSuccess, setSubmitSuccess] = useState<PlaceDetails | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
   const [similarWarning, setSimilarWarning] = useState<string | null>(null);
+  const [copiedLive, setCopiedLive] = useState(false);
 
   const {
     register,
@@ -86,6 +87,12 @@ export const PlaceForm: React.FC<PlaceFormProps> = ({
       transportType: "Bus",
     },
   });
+
+  // Watch form values in real time to calculate live attributes JSON payload
+  const watchedFormValues = useWatch({ control });
+  const livePayload = useMemo(() => {
+    return normalizePlaceDetails((watchedFormValues || {}) as PlaceFormValues);
+  }, [watchedFormValues]);
 
   // Dynamically load place data into form fields when initialPlace changes (edit mode)
   useEffect(() => {
@@ -385,6 +392,46 @@ export const PlaceForm: React.FC<PlaceFormProps> = ({
                 <p className="text-[10px] text-slate-500 leading-relaxed">
                   Coordinates must be decimal format (Latitude: -90 to 90, Longitude: -180 to 180). Check GPS or maps to acquire precise values.
                 </p>
+              </div>
+            </div>
+
+            {/* Live Attributes Payload JSON Card */}
+            <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-5 md:p-6 backdrop-blur-md flex flex-col gap-4 sticky top-20">
+              <div className="flex items-center justify-between border-b border-slate-850 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-violet-400" />
+                    Live Payload JSON
+                  </h3>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      navigator.clipboard.writeText(JSON.stringify(livePayload, null, 2));
+                      setCopiedLive(true);
+                      setTimeout(() => setCopiedLive(false), 2000);
+                    }}
+                    className="text-[10px] py-1 px-2.5 flex items-center gap-1 bg-slate-950 border-slate-800 hover:bg-slate-900"
+                  >
+                    {copiedLive ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-slate-400" />}
+                    {copiedLive ? "Copied!" : "Copy JSON"}
+                  </Button>
+                </div>
+              </div>
+
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Real-time normalized attributes payload schema updating live as you edit form fields or attach image links.
+              </p>
+
+              <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-850 max-h-[420px] overflow-y-auto font-mono text-[11px] leading-relaxed scrollbar-thin select-text">
+                <pre className="text-emerald-400/90 whitespace-pre-wrap font-mono">
+                  {JSON.stringify(livePayload, null, 2)}
+                </pre>
               </div>
             </div>
 
