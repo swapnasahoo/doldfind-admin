@@ -12,6 +12,10 @@ export const placeSchema = z
       .string()
       .min(10, { message: "Description must be at least 10 characters long" })
       .max(5000, { message: "Description cannot exceed 5000 characters" }),
+    credits: z
+      .string()
+      .min(1, { message: "Credits & attribution is required" })
+      .max(256, { message: "Credits cannot exceed 256 characters" }),
     placeType: z.enum(["Spot", "Cafe", "Market", ""]).refine((val) => val === "Spot" || val === "Cafe" || val === "Market", {
       message: "Place type must be Spot, Cafe, or Market",
     }),

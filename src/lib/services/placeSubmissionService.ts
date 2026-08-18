@@ -54,6 +54,7 @@ export class PlaceSubmissionService {
       openingHours: parsed.openingHours,
       transportType: parsed.transportType,
       coordinates: parsed.coordinates,
+      credits: parsed.credits,
     };
 
     const auditLog: PlaceSubmissionAudit = {

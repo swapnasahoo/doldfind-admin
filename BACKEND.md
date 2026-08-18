@@ -89,6 +89,7 @@ The project integrates with **Appwrite Cloud** using the official Node Server SD
 | :--- | :--- | :--- |
 | `placeName` | String (varchar) | Size: 128, Required |
 | `description` | String (varchar) | Size: 5000, Required |
+| `credits` | String (varchar) | Size: 256, Required |
 | `placeType` | String Enum | `"Spot"`, `"Market"`, `"Cafe"`, Required |
 | `mainCategory` | String (varchar) | Size: 32, Required |
 | `categories` | String Array (varchar) | Size: 32 per item, Optional |

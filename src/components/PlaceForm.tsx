@@ -48,6 +48,7 @@ export const PlaceForm: React.FC<PlaceFormProps> = ({
     defaultValues: {
       placeName: "",
       description: "",
+      credits: "",
       placeType: "Spot",
       mainCategory: "",
       categories: [],
@@ -102,6 +103,7 @@ export const PlaceForm: React.FC<PlaceFormProps> = ({
       reset({
         placeName: "",
         description: "",
+        credits: "",
         placeType: "Spot",
         mainCategory: "",
         categories: [],
@@ -351,6 +353,14 @@ export const PlaceForm: React.FC<PlaceFormProps> = ({
                 placeholder="Share instructions, history, atmosphere, or vibe of this place..."
                 error={errors.description?.message}
                 {...register("description")}
+              />
+
+              {/* Credits & Attribution (Required) */}
+              <Input
+                label="Credits & Attribution (Required)"
+                placeholder="e.g. Photo by Swapna Sahoo (Unsplash / CC BY 4.0), Original Spot Contributor"
+                error={errors.credits?.message}
+                {...register("credits")}
               />
             </div>
 

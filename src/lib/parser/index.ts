@@ -114,5 +114,6 @@ export function parseIncomingPayload(data: PlaceFormValues) {
     openingHours,
     transportType,
     coordinates,
+    credits: cleanString(data.credits || ""),
   };
 }

@@ -143,6 +143,7 @@ export function normalizePlaceDetails(formValues: PlaceFormValues): PlaceDetails
 
     placeName: (formValues?.placeName || "").trim(),
     description: (formValues?.description || "").trim(),
+    credits: (formValues?.credits || "").trim(),
 
     placeType: (formValues?.placeType || "Spot") as PlaceType,
     mainCategory: (formValues?.mainCategory || "").trim(),
@@ -286,6 +287,7 @@ export function mapPlaceDetailsToFormValues(place: PlaceDetails): PlaceFormValue
   return {
     placeName: place.placeName || "",
     description: place.description || "",
+    credits: place.credits || "",
     placeType: place.placeType || "Spot",
     mainCategory: place.mainCategory || "",
     categories: place.categories || [],
