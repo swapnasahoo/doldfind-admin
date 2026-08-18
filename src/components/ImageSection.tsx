@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { Control, Controller, FieldErrors } from "react-hook-form";
+import { Control, Controller, FieldErrors, UseFormSetValue, UseFormGetValues } from "react-hook-form";
 import {
   Image as ImageIcon,
   UploadCloud,
@@ -11,6 +11,7 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
+  Sparkles,
 } from "lucide-react";
 import { PlaceFormValues } from "@/types/place";
 import { Input } from "./ui/Input";
@@ -19,14 +20,18 @@ import { Button } from "./ui/Button";
 interface ImageSectionProps {
   control: Control<PlaceFormValues>;
   errors: FieldErrors<PlaceFormValues>;
+  setValue?: UseFormSetValue<PlaceFormValues>;
+  getValues?: UseFormGetValues<PlaceFormValues>;
 }
 
-export const ImageSection: React.FC<ImageSectionProps> = ({ control, errors }) => {
+export const ImageSection: React.FC<ImageSectionProps> = ({ control, errors, setValue, getValues }) => {
   const [activeTab, setActiveTab] = useState<"upload" | "url">("upload");
   const [newImageUrl, setNewImageUrl] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isAutoRetrieving, setIsAutoRetrieving] = useState(false);
+  const [autoRetrieveSuccess, setAutoRetrieveSuccess] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = async (
@@ -133,8 +138,9 @@ export const ImageSection: React.FC<ImageSectionProps> = ({ control, errors }) =
         render={({ field }) => {
           const currentImages: string[] = field.value || [];
 
-          const handleAddUrl = () => {
+          const handleAddUrl = async () => {
             setErrorMessage(null);
+            setAutoRetrieveSuccess(null);
             const trimmed = newImageUrl.trim();
             if (!trimmed) {
               setErrorMessage("Please enter a valid image URL");
@@ -149,7 +155,55 @@ export const ImageSection: React.FC<ImageSectionProps> = ({ control, errors }) =
               return;
             }
 
-            field.onChange([...currentImages, trimmed]);
+            let finalUrl = trimmed;
+
+            // Check if domain is Wikimedia Commons or Flickr for Auto Retrieval
+            const isWikimedia = trimmed.includes("wikimedia.org") || trimmed.includes("wikipedia.org");
+            const isFlickr = trimmed.includes("flickr.com") || trimmed.includes("flic.kr");
+
+            if (isWikimedia || isFlickr) {
+              setIsAutoRetrieving(true);
+              try {
+                const res = await fetch(`/api/metadata?url=${encodeURIComponent(trimmed)}`);
+                const result = await res.json();
+
+                if (res.ok && result.success && result.data) {
+                  if (result.data.imageUrl) {
+                    finalUrl = result.data.imageUrl;
+                  }
+                  const creditStr = result.data.creditString || `${result.data.author} (${result.data.license})`;
+                  setAutoRetrieveSuccess(
+                    `Auto-retrieved metadata from ${result.data.source}: "${creditStr}"`
+                  );
+
+                  if (setValue && getValues) {
+                    const currentCreds = (getValues("credits") || "").trim();
+                    if (!currentCreds) {
+                      setValue("credits", creditStr, { shouldValidate: true, shouldDirty: true });
+                    } else if (!currentCreds.includes(result.data.author)) {
+                      setValue("credits", `${currentCreds}; ${creditStr}`, {
+                        shouldValidate: true,
+                        shouldDirty: true,
+                      });
+                    }
+                  }
+                } else {
+                  setErrorMessage(result.error?.message || "Failed to auto-retrieve metadata from Wikimedia/Flickr.");
+                }
+              } catch (err) {
+                setErrorMessage("Network error auto-retrieving metadata.");
+              } finally {
+                setIsAutoRetrieving(false);
+              }
+            } else {
+              setAutoRetrieveSuccess(
+                "Direct URL attached. Auto-retrieval is supported specifically for Wikimedia Commons and Flickr links."
+              );
+            }
+
+            if (!currentImages.includes(finalUrl)) {
+              field.onChange([...currentImages, finalUrl]);
+            }
             setNewImageUrl("");
           };
 
@@ -213,32 +267,56 @@ export const ImageSection: React.FC<ImageSectionProps> = ({ control, errors }) =
 
               {/* Tab 2: Paste Direct URL */}
               {activeTab === "url" && (
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                  <div className="flex-1">
-                    <Input
-                      placeholder="Paste image URL (e.g. https://images.unsplash.com/...)"
-                      value={newImageUrl}
-                      onChange={(e) => {
-                        setNewImageUrl(e.target.value);
-                        if (errorMessage) setErrorMessage(null);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          handleAddUrl();
-                        }
-                      }}
-                    />
+                <div className="flex flex-col gap-2">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                    <div className="flex-1">
+                      <Input
+                        placeholder="Paste Wikimedia Commons or Flickr URL (e.g. https://commons.wikimedia.org/wiki/File:...)"
+                        value={newImageUrl}
+                        onChange={(e) => {
+                          setNewImageUrl(e.target.value);
+                          if (errorMessage) setErrorMessage(null);
+                          if (autoRetrieveSuccess) setAutoRetrieveSuccess(null);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleAddUrl();
+                          }
+                        }}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      onClick={handleAddUrl}
+                      disabled={isAutoRetrieving}
+                      variant="secondary"
+                      className="sm:self-start bg-slate-900 border-slate-800 text-xs font-bold flex items-center justify-center gap-1.5 py-2.5 px-4"
+                    >
+                      {isAutoRetrieving ? (
+                        <>
+                          <Loader2 className="w-4 h-4 text-violet-400 animate-spin" />
+                          Retrieving...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-4 h-4 text-violet-400" />
+                          Add & Auto-Retrieve
+                        </>
+                      )}
+                    </Button>
                   </div>
-                  <Button
-                    type="button"
-                    onClick={handleAddUrl}
-                    variant="secondary"
-                    className="sm:self-start bg-slate-900 border-slate-800 text-xs font-bold flex items-center justify-center gap-1.5 py-2.5 px-4"
-                  >
-                    <Plus className="w-4 h-4 text-violet-400" />
-                    Add URL
-                  </Button>
+                  <p className="text-[10px] text-slate-400">
+                    ⚡ Auto-retrieval automatically extracts image attribution &amp; license metadata for <strong className="text-slate-300">Wikimedia Commons</strong> and <strong className="text-slate-300">Flickr</strong> URLs.
+                  </p>
+                </div>
+              )}
+
+              {/* Status & Error Messages */}
+              {autoRetrieveSuccess && (
+                <div className="flex items-center gap-2 text-xs font-medium text-emerald-400 bg-emerald-955/40 border border-emerald-900/50 p-2.5 rounded-lg animate-fadeIn">
+                  <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                  <span>{autoRetrieveSuccess}</span>
                 </div>
               )}
 

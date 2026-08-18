@@ -40,6 +40,7 @@ export const PlaceForm: React.FC<PlaceFormProps> = ({
     handleSubmit,
     control,
     getValues,
+    setValue,
     reset,
     formState: { errors, isValid, isSubmitting },
   } = useForm<PlaceFormValues>({
@@ -365,7 +366,7 @@ export const PlaceForm: React.FC<PlaceFormProps> = ({
             </div>
 
             {/* Images & Gallery Section */}
-            <ImageSection control={control} errors={errors} />
+            <ImageSection control={control} errors={errors} setValue={setValue} getValues={getValues} />
 
             {/* Quick Information Section */}
             <QuickInfoSection
